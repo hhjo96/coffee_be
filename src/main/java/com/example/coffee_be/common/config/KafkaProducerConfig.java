@@ -1,8 +1,8 @@
 package com.example.coffee_be.common.config;
 
+import com.example.coffee_be.common.model.kafka.event.OrderCompletedEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.example.kafkaredisspring.common.model.kafka.event.PaymentCompletedEvent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,7 +25,7 @@ public class KafkaProducerConfig {
     // PaymentCompletedEvent ProducerFactory
 
     @Bean
-    public ProducerFactory<String, PaymentCompletedEvent> eventProducerFactory() {
+    public ProducerFactory<String, OrderCompletedEvent> eventProducerFactory() {
         Map<String, Object> props = new HashMap<>();
 
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -36,7 +36,7 @@ public class KafkaProducerConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, PaymentCompletedEvent> paymentCompletedEventKafkaTemplate() {
+    public KafkaTemplate<String, OrderCompletedEvent> paymentCompletedEventKafkaTemplate() {
         return new KafkaTemplate<>(eventProducerFactory());
     }
 

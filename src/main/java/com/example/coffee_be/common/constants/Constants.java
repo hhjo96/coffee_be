@@ -2,8 +2,8 @@ package com.example.coffee_be.common.constants;
 
 public class Constants {
 
-    // region 회원 관련 메세지
-    public static final String MSG_NOT_FOUND_MEMBER = "회원을 찾을 수 없습니다";
+    // region 메뉴 관련 메시지
+    public static final String MSG_NOT_FOUND_MENU = "메뉴를 찾을 수 없습니다";
 
     // endregion
 

@@ -4,13 +4,10 @@ import com.example.coffee_be.common.model.kafka.event.OrderCompletedEvent;
 import com.example.coffee_be.domain.pointHistory.service.PointHistoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.kafkaredisspring.common.model.kafka.event.PaymentCompletedEvent;
-import org.example.kafkaredisspring.domain.paymentHistory.service.PaymentHistoryService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import static com.example.coffee_be.common.model.kafka.topic.KafkaTopics.TOPIC_ORDER_COMPLETED;
-import static org.example.kafkaredisspring.common.model.kafka.topic.KafkaTopics.TOPIC_PAYMENT_COMPLETED;
 
 @Component
 @Slf4j
@@ -21,8 +18,8 @@ public class PointHistoryListener {
 
     @KafkaListener(
         topics = TOPIC_ORDER_COMPLETED,
-        groupId = "payment-history-group",
-        containerFactory = "paymentHistoryKafkaListenerContainerFactory"
+        groupId = "order-history-group",
+        containerFactory = "orderHistoryKafkaListenerContainerFactory"
     )
     public void consume(OrderCompletedEvent event) {
 

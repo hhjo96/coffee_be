@@ -36,7 +36,7 @@ public class RedisCacheConfig {
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
 
                 // Prefix
-                .computePrefixWith(cacheName -> "auction::" + cacheName + "::")
+                .computePrefixWith(cacheName -> "menu::" + cacheName + "::")
 
                 // Key Serializer
                 .serializeKeysWith(
@@ -54,7 +54,7 @@ public class RedisCacheConfig {
         // 캐시별 설정 (검색)
         Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
 
-        cacheConfigs.put("auctionSearch",
+        cacheConfigs.put("menuSearch",
                 defaultConfig.entryTtl(Duration.ofMinutes(10)));
 
         return RedisCacheManager.builder(connectionFactory)
