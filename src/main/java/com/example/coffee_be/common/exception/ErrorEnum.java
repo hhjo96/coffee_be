@@ -9,8 +9,8 @@ import static com.example.coffee_be.common.constants.Constants.*;
 public enum ErrorEnum {
 
     // 경매 관련
-    INVALID_MINIMUM_BID(HttpStatus.BAD_REQUEST, MSG_NOT_FOUND_MEMBER),
-    INVALID_MINIMUM_BID2(HttpStatus.BAD_REQUEST, MSG_NOT_FOUND_MEMBER);
+    INVALID_MENU(HttpStatus.BAD_REQUEST, MSG_NOT_FOUND_MENU),
+    INVALID_MINIMUM_BID2(HttpStatus.BAD_REQUEST, MSG_NOT_FOUND_MENU);
 
     private final HttpStatus status;
     private final String message;

@@ -1,8 +1,8 @@
 package com.example.coffee_be.common.config;
 
+import com.example.coffee_be.common.model.kafka.event.OrderCompletedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.example.kafkaredisspring.common.model.kafka.event.PaymentCompletedEvent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,8 +43,8 @@ public class KafkaConsumerConfig {
     }
 
     // 처음엔 베이스컨슈머팩토리였는데 튜터님이 이름 바꾸심
-    private ConsumerFactory<String, PaymentCompletedEvent> buildConsumerFactory(String groupId) {
-        JsonDeserializer<PaymentCompletedEvent> deserializer = new JsonDeserializer<>(PaymentCompletedEvent.class);
+    private ConsumerFactory<String, OrderCompletedEvent> buildConsumerFactory(String groupId) {
+        JsonDeserializer<OrderCompletedEvent> deserializer = new JsonDeserializer<>(OrderCompletedEvent.class);
 
         return new DefaultKafkaConsumerFactory<>(
             baseConsumerProps(groupId),
@@ -61,7 +61,7 @@ public class KafkaConsumerConfig {
     // =====================================================================================
     @Bean
     public CommonErrorHandler commonErrorHandlerWithDLT(
-        KafkaTemplate<String, PaymentCompletedEvent> paymentCompletedKafkaTemplate) {
+        KafkaTemplate<String, OrderCompletedEvent> paymentCompletedKafkaTemplate) {
 
         // 재처리했는데도 계속 실패한 경우 dlt 토픽으로 해당 메시지를 보낸다
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(paymentCompletedKafkaTemplate);
@@ -80,15 +80,15 @@ public class KafkaConsumerConfig {
     // =====================================================================================
 
     @Bean
-    public ConsumerFactory<String, PaymentCompletedEvent> productRankingConsumerFactory() {
+    public ConsumerFactory<String, OrderCompletedEvent> productRankingConsumerFactory() {
         return buildConsumerFactory("product-ranking-group");
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, PaymentCompletedEvent> productRankingKafkaListenerContainerFactory(
+    public ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent> productRankingKafkaListenerContainerFactory(
         CommonErrorHandler commonErrorHandlerWithDLT) {
 
-        var factory = new ConcurrentKafkaListenerContainerFactory<String, PaymentCompletedEvent>();
+        var factory = new ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent>();
         factory.setConsumerFactory(productRankingConsumerFactory());
         factory.setCommonErrorHandler(commonErrorHandlerWithDLT);
         return factory;
@@ -100,16 +100,16 @@ public class KafkaConsumerConfig {
     // =====================================================================================
 
     @Bean
-    public ConsumerFactory<String, PaymentCompletedEvent> paymentHistoryConsumerFactory() {
+    public ConsumerFactory<String, OrderCompletedEvent> orderHistoryConsumerFactory() {
         return buildConsumerFactory("payment-history-group");
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, PaymentCompletedEvent> paymentHistoryKafkaListenerContainerFactory(
+    public ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent> orderHistoryKafkaListenerContainerFactory(
         CommonErrorHandler commonErrorHandlerWithDLT) {
 
-        var factory = new ConcurrentKafkaListenerContainerFactory<String, PaymentCompletedEvent>();
-        factory.setConsumerFactory(paymentHistoryConsumerFactory());
+        var factory = new ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent>();
+        factory.setConsumerFactory(orderHistoryConsumerFactory());
         factory.setConcurrency(9);
         factory.setCommonErrorHandler(commonErrorHandlerWithDLT);
         return factory;
@@ -121,15 +121,15 @@ public class KafkaConsumerConfig {
     // =====================================================================================
 
     @Bean
-    public ConsumerFactory<String, PaymentCompletedEvent> deliveryConsumerFactory() {
+    public ConsumerFactory<String, OrderCompletedEvent> deliveryConsumerFactory() {
         return buildConsumerFactory("delivery-group");
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, PaymentCompletedEvent> deliveryKafkaListenerContainerFactory(
+    public ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent> deliveryKafkaListenerContainerFactory(
         CommonErrorHandler commonErrorHandlerWithDLT) {
 
-        var factory = new ConcurrentKafkaListenerContainerFactory<String, PaymentCompletedEvent>();
+        var factory = new ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent>();
         factory.setConsumerFactory(deliveryConsumerFactory());
         factory.setCommonErrorHandler(commonErrorHandlerWithDLT);
         return factory;

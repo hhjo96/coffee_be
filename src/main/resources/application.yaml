@@ -8,7 +8,7 @@ spring:
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     properties:
       hibernate:
         format_sql: true
@@ -20,3 +20,29 @@ spring:
       host: localhost
   kafka:
     bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+  ai:
+    # ChatClient auto-configuration 비활성화 (AiConfig에서 수동 생성)
+    chat:
+      client:
+        enabled: false
+
+    # OpenAI (기본)
+    openai:
+      api-key: ${OPENAI_API_KEY:sk-proj-XXXXXXXXXXXXXX}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+          max-tokens: 2000
+    elasticsearch:
+      uris: http://localhost:9200
+  server:
+    port: 8080
+
+  logging:
+    level:
+      org.springframework.ai: DEBUG
+      com.study.springai: DEBUG
+
+app:
+  init-data: true

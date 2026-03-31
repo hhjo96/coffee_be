@@ -29,7 +29,7 @@ repositories {
 
 ext {
     set('snippetsDir', file("build/generated-snippets"))
-    set('springAiVersion', "2.0.0-M3")
+    set('springAiVersion', "1.0.0")
 }
 
 dependencies {
@@ -48,10 +48,14 @@ dependencies {
     annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"
     annotationProcessor "jakarta.annotation:jakarta.annotation-api"
     annotationProcessor "jakarta.persistence:jakarta.persistence-api"
-
+    // 파싱 도구
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    implementation 'org.springframework.retry:spring-retry'
+
+    implementation 'org.springframework:spring-aspects'
 
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'com.mysql:mysql-connector-j'

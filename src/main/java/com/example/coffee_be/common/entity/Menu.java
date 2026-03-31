@@ -47,10 +47,6 @@ public class Menu extends BaseEntity {
         this.price = price;
     }
 
-    public void changeDescription(String description) {
-        this.description = description;
-    }
-
     public void deleteMenu() {
         this.deletedAt = LocalDateTime.now();
     }
