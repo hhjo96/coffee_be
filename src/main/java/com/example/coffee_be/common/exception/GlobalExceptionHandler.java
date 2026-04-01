@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<BaseResponse<Void>> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
         log.error("지원하지 않는 메소드 에러 발생 : ", e);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(BaseResponse.fail(String.valueOf(HttpStatus.BAD_REQUEST), e.getMessage(), null));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(BaseResponse.fail(String.valueOf(HttpStatus.METHOD_NOT_ALLOWED), e.getMessage(), null));
     }
 
         @ExceptionHandler(Exception.class)

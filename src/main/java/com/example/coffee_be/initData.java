@@ -1,7 +1,10 @@
 package com.example.coffee_be;
 
+import com.example.coffee_be.common.entity.Customer;
 import com.example.coffee_be.common.entity.Menu;
+import com.example.coffee_be.common.entity.Point;
 import com.example.coffee_be.domain.menu.repository.MenuRepository;
+import com.example.coffee_be.domain.point.repository.PointRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

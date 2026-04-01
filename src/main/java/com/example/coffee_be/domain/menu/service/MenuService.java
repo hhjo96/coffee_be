@@ -57,7 +57,7 @@ public class MenuService {
     // 처음 호출시 db조회 후 레디스에 저장, 이후에는 레디스에서 바로 반환
     @Cacheable(value = "menu", key = "#menuId")
     public MenuDto getOneV1Cache(Long menuId) {
-        Menu menu = menuRepository.findById(menuId).orElseThrow(() -> new ServiceErrorException(ErrorEnum.INVALID_MENU));
+        Menu menu = menuRepository.findById(menuId).orElseThrow(() -> new ServiceErrorException(ErrorEnum.NOT_FOUND_MENU));
         log.info("menu 단건 조회 v1");
 
         return new MenuDto(menu.getId(), menu.getName(), menu.getPrice());
@@ -71,7 +71,7 @@ public class MenuService {
             return cached;
         }
         //없으면 db에서 가져오기
-        Menu menu = menuRepository.findById(menuId).orElseThrow(() -> new ServiceErrorException(ErrorEnum.INVALID_MENU));
+        Menu menu = menuRepository.findById(menuId).orElseThrow(() -> new ServiceErrorException(ErrorEnum.NOT_FOUND_MENU));
 
         // db에서 직접조회한 값을 캐시에 저장
         MenuDto dto = new MenuDto(menu.getId(), menu.getName(), menu.getPrice());
@@ -89,7 +89,7 @@ public class MenuService {
     // 커밋 전 캐시 삭제로 옛날 값 캐싱하는 문제가 발생할 수 있으나, 수정하는 이벤트가 자주 일어나지 않으므로 별도 처리 없음
     @Transactional
     public MenuDto updatePostByIdV1(long postId, UpdateMenuRequest request) {
-        Menu menu = menuRepository.findById(postId).orElseThrow(() -> new ServiceErrorException(ErrorEnum.INVALID_MENU));
+        Menu menu = menuRepository.findById(postId).orElseThrow(() -> new ServiceErrorException(ErrorEnum.NOT_FOUND_MENU));
 
         menu.changePrice(request.getPrice());
 
@@ -110,7 +110,7 @@ public class MenuService {
     // 커밋 전 캐시 삭제로 옛날 값 캐싱하는 문제가 발생할 수 있으나, 수정하는 이벤트가 자주 일어나지 않으므로 별도 처리 없음
     @Transactional
     public MenuDto updatePostByIdV2(long menuId, UpdateMenuRequest request) {
-        Menu menu = menuRepository.findById(menuId).orElseThrow(() -> new ServiceErrorException(ErrorEnum.INVALID_MENU));
+        Menu menu = menuRepository.findById(menuId).orElseThrow(() -> new ServiceErrorException(ErrorEnum.NOT_FOUND_MENU));
 
         menu.changePrice(request.getPrice());
 
@@ -127,9 +127,9 @@ public class MenuService {
     public void delete(Long menuId) {
         boolean existence = menuRepository.existsById(menuId);
         if(!existence) {
-            throw new ServiceErrorException(ErrorEnum.INVALID_MENU);
+            throw new ServiceErrorException(ErrorEnum.NOT_FOUND_MENU);
         }
-        Menu menu = menuRepository.findById(menuId).orElseThrow(() -> new ServiceErrorException(ErrorEnum.INVALID_MENU));
+        Menu menu = menuRepository.findById(menuId).orElseThrow(() -> new ServiceErrorException(ErrorEnum.NOT_FOUND_MENU));
         menu.deleteMenu();
 
     }

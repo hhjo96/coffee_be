@@ -23,7 +23,7 @@ public class PointHistoryListener {
     )
     public void consume(OrderCompletedEvent event) {
 
-        log.info("[Consumer-Record] 결제 완료 이벤트 수신 - paymentId={}, orderId={}, userId={}", event.getPaymentId(), event.getOrderId(), event.getUserId());
+        log.info("[Consumer-Record] 결제 완료 이벤트 수신 - orderId={}, userId={}", event.getOrderId(), event.getUserId());
 
         pointHistoryService.savePointHistory(event);
     }

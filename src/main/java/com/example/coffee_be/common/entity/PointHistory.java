@@ -39,7 +39,7 @@ public class PointHistory {
 
     private LocalDateTime payedAt;
 
-    public static PointHistory createPointHistory(Long customerId, int amount, PointStatus status, LocalDateTime payedAt) {
+    public static PointHistory createPointHistory(Long customerId, int amount, PointStatus status, LocalDateTime payedAt ) {
         PointHistory pointHistory = new PointHistory();
         pointHistory.customerId = customerId;
         pointHistory.amount = amount;

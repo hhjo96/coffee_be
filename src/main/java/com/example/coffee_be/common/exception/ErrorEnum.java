@@ -8,9 +8,16 @@ import static com.example.coffee_be.common.constants.Constants.*;
 @Getter
 public enum ErrorEnum {
 
-    // 경매 관련
-    INVALID_MENU(HttpStatus.BAD_REQUEST, MSG_NOT_FOUND_MENU),
-    INVALID_MINIMUM_BID2(HttpStatus.BAD_REQUEST, MSG_NOT_FOUND_MENU);
+    // 메뉴 관련
+    NOT_FOUND_MENU(HttpStatus.NOT_FOUND, MSG_NOT_FOUND_MENU),
+
+    //포인트 관련
+    POINT_CHARGE_UNDER_ZERO(HttpStatus.BAD_REQUEST, MSG_POINT_CHARGE_UNDER_ZERO),
+    POINT_USE_UNDER_ZERO(HttpStatus.BAD_REQUEST, MSG_POINT_USE_UNDER_ZERO),
+    POINT_INSUFFICIENT(HttpStatus.BAD_REQUEST, MSG_POINT_INSUFFICIENT),
+    POINT_CHARGE_CONFLICT(HttpStatus.CONFLICT, MSG_POINT_CHARGE_CONFLICT),
+    POINT_LOCK_FAILED(HttpStatus.CONFLICT, MSG_POINT_CHARGE_CONFLICT),
+    NOT_FOUND_POINT(HttpStatus.NOT_FOUND, MSG_NOT_FOUND_POINT);
 
     private final HttpStatus status;
     private final String message;
