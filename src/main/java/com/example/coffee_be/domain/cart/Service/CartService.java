@@ -30,12 +30,18 @@ public class CartService {
     private final MenuRepository menuRepository;
 
     // 장바구니 조회
-    // 없으면 빈 장바구니 생성해서 반환
+    // 없으면 없다고 반환
     public CartDto getCart(Long userId) {
-        Cart cart = cartRepository.findByCustomerId(userId)
-                .orElseGet(() -> cartRepository.save(Cart.createCart(userId)));
-        log.info("[장바구니] 조회 성공");
-        return buildCartDto(cart);
+        return cartRepository.findByCustomerId(userId)
+                .map(cart -> {
+                    log.info("[장바구니] 조회 성공 - userId={}", userId);
+                    return buildCartDto(cart);
+                })
+                .orElseGet(() -> {
+                    log.info("[장바구니] 없음 - userId={}", userId);
+                    return new CartDto(null, userId, List.of(), 0);
+                    // ↑ DB 건드리지 않고 빈 응답만 반환
+                });
     }
 
     // 메뉴 담기
