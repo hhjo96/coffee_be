@@ -44,7 +44,8 @@ public class PointService {
     public PointDto chargePointsOpt(Long userId, ChargePointRequest req) {
         for (int i = 0; i < 3; i++) {
             try {
-                return doChargeOpt(userId, req);
+                log.info("[낙관적 락]" );
+                return doCharge(userId, req);
             }
             catch (OptimisticLockingFailureException e) {
                 if (i == 2) throw new ServiceErrorException(POINT_CHARGE_CONFLICT);
@@ -63,6 +64,7 @@ public class PointService {
 
         historyRepository.save(PointHistory.createPointHistory(userId,  amount, CHARGED, LocalDateTime.now()));
 
+        log.info("[비관적 락]" );
         return new PointDto(userId, point.getBalance());
     }
     // 3. 분산 락 (Redisson RLock)
@@ -73,7 +75,8 @@ public class PointService {
             if (!lock.tryLock(5, 10, TimeUnit.SECONDS))
                 throw new ServiceErrorException(POINT_LOCK_FAILED);
 
-            return doChargeOpt(userId, req);
+            log.info("[분산 락] 포인트 충전 완료" );
+            return doCharge(userId, req);
 
         } catch (InterruptedException e) {
             throw new ServiceErrorException(POINT_LOCK_FAILED);
@@ -120,7 +123,7 @@ public class PointService {
         }
     }
 
-    private PointDto doChargeOpt(Long userId, ChargePointRequest request) {
+    private PointDto doCharge(Long userId, ChargePointRequest request) {
         Point point = pointRepository.findByCustomerId(userId)
                 .orElseGet(() -> pointRepository.save(Point.createPoint(userId)));
 
@@ -131,7 +134,7 @@ public class PointService {
         PointHistory history = PointHistory.createPointHistory(userId, amount, PointStatus.CHARGED, LocalDateTime.now());
         historyRepository.save(history);
 
-        log.info("[낙관적 락] 포인트 충전 완료 - userId={}, balance={}", userId, point.getBalance());
+        log.info("포인트 충전 완료 - userId={}, balance={}", userId, point.getBalance());
 
         return new PointDto(userId, point.getBalance());
     }
