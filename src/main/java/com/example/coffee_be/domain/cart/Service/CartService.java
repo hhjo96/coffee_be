@@ -31,10 +31,10 @@ public class CartService {
 
     // 장바구니 조회
     // 없으면 빈 장바구니 생성해서 반환
-    @Transactional(readOnly = true)
     public CartDto getCart(Long userId) {
         Cart cart = cartRepository.findByCustomerId(userId)
                 .orElseGet(() -> cartRepository.save(Cart.createCart(userId)));
+        log.info("[장바구니] 조회 성공");
         return buildCartDto(cart);
     }
 
