@@ -16,11 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class CartController {
 
     private final CartService cartService;
-    // 장바구니 조회
-    @GetMapping("/{userId}")
-    public ResponseEntity<BaseResponse<CartDto>> getCart(@PathVariable Long userId) {
-        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.success("200", "장바구니 조회 성공", cartService.getCart(userId)));
-    }
+
     // 메뉴 담기
     @PostMapping("/{userId}/items")
     public ResponseEntity<BaseResponse<CartDto>> addItem(
@@ -29,6 +25,13 @@ public class CartController {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(BaseResponse.success("200", "메뉴 담기 성공", cartService.addItem(userId, request)));
     }
+
+    // 장바구니 조회
+    @GetMapping("/{userId}")
+    public ResponseEntity<BaseResponse<CartDto>> getCart(@PathVariable Long userId) {
+        return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.success("200", "장바구니 조회 성공", cartService.getCart(userId)));
+    }
+
     // 장바구니 전체 비우기
     @DeleteMapping("/{userId}/items")
     public ResponseEntity<BaseResponse<Void>> clearCart(@PathVariable Long userId) {
