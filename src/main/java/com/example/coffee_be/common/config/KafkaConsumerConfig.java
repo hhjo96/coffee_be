@@ -76,27 +76,27 @@ public class KafkaConsumerConfig {
 
 
     // =====================================================================================
-    // Product Ranking Consumer
+    // Menu Ranking Consumer
     // =====================================================================================
 
     @Bean
-    public ConsumerFactory<String, OrderCompletedEvent> productRankingConsumerFactory() {
-        return buildConsumerFactory("product-ranking-group");
+    public ConsumerFactory<String, OrderCompletedEvent> menuRankingConsumerFactory() {
+        return buildConsumerFactory("menu-ranking-group");
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent> productRankingKafkaListenerContainerFactory(
+    public ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent> menuRankingKafkaListenerContainerFactory(
         CommonErrorHandler commonErrorHandlerWithDLT) {
 
         var factory = new ConcurrentKafkaListenerContainerFactory<String, OrderCompletedEvent>();
-        factory.setConsumerFactory(productRankingConsumerFactory());
+        factory.setConsumerFactory(menuRankingConsumerFactory());
         factory.setCommonErrorHandler(commonErrorHandlerWithDLT);
         return factory;
     }
 
 
     // =====================================================================================
-    // Payment History Consumer
+    // Order History Consumer
     // =====================================================================================
 
     @Bean
