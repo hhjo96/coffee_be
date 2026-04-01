@@ -31,11 +31,15 @@ public class Order extends BaseEntity {
     @Enumerated(value = EnumType.STRING)
     private OrderStatus orderStatus;
 
-    public static Order createOrder(Long customerId, Long cartId) {
+    @Column(nullable = false)
+    private int price;
+
+    public static Order createOrder(Long customerId, Long cartId, int price) {
         Order order = new Order();
         order.customerId = customerId;
         order.cartId = cartId;
         order.orderStatus = OrderStatus.PREPARING;
+        order.price = price;
 
         return order;
     }
