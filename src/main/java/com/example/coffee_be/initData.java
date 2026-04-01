@@ -24,6 +24,7 @@ public class initData {
 
     private final MenuRepository menuRepository;
     private final CustomerRepository customerRepository;
+    private final PointRepository pointRepository;
 
     @PostConstruct
     @Transactional
@@ -44,15 +45,16 @@ public class initData {
         Customer customer2 = Customer.createCustomer("김영희");
 
         customerRepository.saveAndFlush(customer1);
-        customerRepository.saveAndFlush(customer1);
+        customerRepository.saveAndFlush(customer2);
 
 
-//        // 초기 포인트 지급
-//        Point point1 = Point.createPoint(customer1.getId(), 10000);
-//        pointRepository.saveAndFlush(point1);
-//        Point point2 = Point.createPoint(customer2.getId());
-//        point2.charge(20000);
-//        pointRepository.saveAndFlush(point2);
+        // 초기 포인트 지급
+        Point point1 = Point.createPoint(customer1.getId());
+        point1.charge(20000);
+        pointRepository.saveAndFlush(point1);
+        Point point2 = Point.createPoint(customer2.getId());
+        point2.charge(10000);
+        pointRepository.saveAndFlush(point2);
 
     }
 }
