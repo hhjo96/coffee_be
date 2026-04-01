@@ -32,6 +32,8 @@ import static com.example.coffee_be.domain.point.enums.PointStatus.USED;
 @Transactional
 public class PointService {
 
+    // todo: 포인트 부족으로 결제 실패시 히스토리에 저장할 status 추가
+
     private final PointHistoryService historyService;
     private final PointRepository pointRepository;
     private final PointHistoryRepository historyRepository;

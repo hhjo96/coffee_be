@@ -26,7 +26,8 @@ public class Order extends BaseEntity {
     @Column(nullable = false)
     private Long customerId;
 
-    private Long cartId;
+    // todo: cartId로 수정, 여러개 주문할 수 있도록 수정
+    private Long menuId;
 
     @Enumerated(value = EnumType.STRING)
     private OrderStatus orderStatus;
@@ -34,10 +35,10 @@ public class Order extends BaseEntity {
     @Column(nullable = false)
     private int price;
 
-    public static Order createOrder(Long customerId, Long cartId, int price) {
+    public static Order createOrder(Long customerId, Long menuId, int price) {
         Order order = new Order();
         order.customerId = customerId;
-        order.cartId = cartId;
+        order.menuId = menuId;
         order.orderStatus = OrderStatus.PREPARING;
         order.price = price;
 

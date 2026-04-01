@@ -7,6 +7,7 @@ import com.example.coffee_be.common.exception.ServiceErrorException;
 import com.example.coffee_be.common.model.kafka.event.OrderCompletedEvent;
 import com.example.coffee_be.common.model.kafka.topic.KafkaTopics;
 import com.example.coffee_be.domain.menu.repository.MenuRepository;
+import com.example.coffee_be.domain.order.enums.OrderStatus;
 import com.example.coffee_be.domain.order.model.dto.OrderDto;
 import com.example.coffee_be.domain.order.model.dto.PopularMenuDto;
 import com.example.coffee_be.domain.order.model.request.OrderRequest;
@@ -23,7 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -38,6 +41,7 @@ public class OrderService {
     private final KafkaTemplate<String, OrderCompletedEvent> kafkaTemplate;
     private final RedissonClient redissonClient;
     private final RedisTemplate<String, Object> redisTemplate;
+    private static final int POPULAR_MENU_LIMIT = 3;
     private static final String LOCK_ORDER_PREFIX = "lock:order:";
     private static final String RANKING_KEY = "ranking:menus";
 
@@ -45,7 +49,7 @@ public class OrderService {
     // 주문+결제
     // 포인트 차감은 pointService.userPointForOrder()
     public OrderDto order(OrderRequest request) {
-        Long userId = request.getUserId();
+        Long userId = request.getCustomerId();
         // 락 키를 userId 기준으로 설정 — 동일 유저의 동시 주문 요청 직렬화
         String lockKey = LOCK_ORDER_PREFIX + userId;
         RLock lock = redissonClient.getLock(lockKey);
@@ -70,7 +74,7 @@ public class OrderService {
     }
 
     private OrderDto doOrder(OrderRequest request) {
-        Long userId = request.getUserId();
+        Long userId = request.getCustomerId();
         Long menuId = request.getMenuId();
 
         // 1. 메뉴 조회 (삭제된 메뉴 제외)
@@ -90,17 +94,65 @@ public class OrderService {
                 .orderId(savedOrder.getId())
                 .productId(menuId)
                 .userId(userId)
-                .quantity()
+                .quantity(1)
                 .price(menu.getPrice())
                 .paidAt(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .build();
-        kafkaTemplate.send(KafkaTopics.TOPIC_ORDER_COMPLETED,
-                String.valueOf(savedOrder.getId()), event);
-        log.info("[주문완료] orderId={}, userId={}, menuId={}, price={}",
+
+        kafkaTemplate.send(KafkaTopics.TOPIC_ORDER_COMPLETED, String.valueOf(savedOrder.getId()), event);
+
+        log.info("[주문완료- 준비중] orderId={}, userId={}, menuId={}, price={}",
                 savedOrder.getId(), userId, menuId, menu.getPrice());
-        return OrderDto.from(savedOrder);
+
+        return new OrderDto(savedOrder.getId(), savedOrder.getCustomerId(), savedOrder.getMenuId(), savedOrder.getPrice(), OrderStatus.PREPARING);
     }
 
+    @Transactional(readOnly = true)
     public List<PopularMenuDto> getPopularMenus() {
+        Set<Object> cached = redisTemplate.opsForZSet().reverseRange(RANKING_KEY, 0, POPULAR_MENU_LIMIT - 1);
+
+        // 캐시에 3개이상 있으면
+        if (cached != null && cached.size() == POPULAR_MENU_LIMIT) {
+            log.info("[인기메뉴] Redis 캐시 히트");
+            return buildPopularMenuDtoFromCache(cached);
+        }
+        // 캐시에 3개미만이거나 없으면
+        log.info("[인기메뉴] 캐시 미스 → DB 집계");
+        return refreshPopularMenuCache();
+    }
+    private List<PopularMenuDto> buildPopularMenuDtoFromCache(Set<Object> menuIds) {
+        List<PopularMenuDto> result = new ArrayList<>();
+        for (Object menuIdTemp : menuIds) {
+            Long menuId = Long.parseLong(menuIdTemp.toString());
+            Double score = redisTemplate.opsForZSet().score(RANKING_KEY, menuIdTemp);
+
+            menuRepository.findById(menuId).filter(m -> m.getDeletedAt() == null)
+                    .ifPresent(menu -> result.add(
+                    new PopularMenuDto(menu.getId(), menu.getName(), menu.getPrice(),
+                            score != null ? score.longValue() : 0L
+                    )));
+        }
+        return result;
+    }
+    private List<PopularMenuDto> refreshPopularMenuCache() {
+        LocalDateTime since = LocalDateTime.now().minusDays(7);
+        List<Object[]> rows = orderRepository.findPopularMenuIdsSince(since, POPULAR_MENU_LIMIT);
+        List<PopularMenuDto> result = new ArrayList<>();
+
+        redisTemplate.delete(RANKING_KEY);
+        for (Object[] row : rows) {
+            Long menuId = ((Number) row[0]).longValue();
+            Long count = ((Number) row[1]).longValue();
+            menuRepository.findById(menuId)
+                    .filter(m -> m.getDeletedAt() == null)
+                    .ifPresent(menu -> {
+                        redisTemplate.opsForZSet().add(RANKING_KEY, menuId.toString(), count);
+                        result.add(new PopularMenuDto(
+                                menu.getId(), menu.getName(), menu.getPrice(), count));
+                    });
+        }
+        redisTemplate.expire(RANKING_KEY, 60, TimeUnit.SECONDS);
+        log.info("[인기메뉴] ZSet 갱신 완료, {}개", result.size());
+        return result;
     }
 }
