@@ -17,7 +17,17 @@ public enum ErrorEnum {
     POINT_INSUFFICIENT(HttpStatus.BAD_REQUEST, MSG_POINT_INSUFFICIENT),
     POINT_CHARGE_CONFLICT(HttpStatus.CONFLICT, MSG_POINT_CHARGE_CONFLICT),
     POINT_LOCK_FAILED(HttpStatus.CONFLICT, MSG_POINT_CHARGE_CONFLICT),
-    NOT_FOUND_POINT(HttpStatus.NOT_FOUND, MSG_NOT_FOUND_POINT);
+    NOT_FOUND_POINT(HttpStatus.NOT_FOUND, MSG_NOT_FOUND_POINT),
+
+
+    // 카트아이템 관련
+    NOT_FOUND_CARTITEM(HttpStatus.NOT_FOUND, MSG_NOT_FOUND_CARTITEM),
+
+
+    // 카트 관련
+    NOT_FOUND_CART(HttpStatus.NOT_FOUND, MSG_NOT_FOUND_CART)
+
+    ;
 
     private final HttpStatus status;
     private final String message;
