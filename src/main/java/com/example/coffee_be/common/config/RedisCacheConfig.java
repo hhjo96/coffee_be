@@ -36,7 +36,7 @@ public class RedisCacheConfig {
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
 
                 // Prefix
-                .computePrefixWith(cacheName -> "menu::" + cacheName + "::")
+                .computePrefixWith(cacheName -> cacheName + ":")
 
                 // Key Serializer
                 .serializeKeysWith(
