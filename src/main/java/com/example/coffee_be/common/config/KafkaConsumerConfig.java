@@ -42,9 +42,9 @@ public class KafkaConsumerConfig {
         return props;
     }
 
-    // 처음엔 베이스컨슈머팩토리였는데 튜터님이 이름 바꾸심
     private ConsumerFactory<String, OrderCompletedEvent> buildConsumerFactory(String groupId) {
         JsonDeserializer<OrderCompletedEvent> deserializer = new JsonDeserializer<>(OrderCompletedEvent.class);
+        deserializer.addTrustedPackages("*");
 
         return new DefaultKafkaConsumerFactory<>(
             baseConsumerProps(groupId),
@@ -61,10 +61,10 @@ public class KafkaConsumerConfig {
     // =====================================================================================
     @Bean
     public CommonErrorHandler commonErrorHandlerWithDLT(
-        KafkaTemplate<String, OrderCompletedEvent> paymentCompletedKafkaTemplate) {
+        KafkaTemplate<String, OrderCompletedEvent> orderCompletedKafkaTemplate) {
 
         // 재처리했는데도 계속 실패한 경우 dlt 토픽으로 해당 메시지를 보낸다
-        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(paymentCompletedKafkaTemplate);
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(orderCompletedKafkaTemplate);
 
         //실패하자마자 재처리할건지, 실패 후 기다렸다가 재처리할건지 결정
         // 디폴트 즉시10회( 재처리시도 9회)
@@ -101,7 +101,7 @@ public class KafkaConsumerConfig {
 
     @Bean
     public ConsumerFactory<String, OrderCompletedEvent> orderHistoryConsumerFactory() {
-        return buildConsumerFactory("payment-history-group");
+        return buildConsumerFactory("order-history-group");
     }
 
     @Bean

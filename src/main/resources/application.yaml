@@ -1,6 +1,7 @@
 spring:
   application:
     name: coffee_be
+  datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
@@ -36,8 +37,8 @@ spring:
           max-tokens: 2000
     elasticsearch:
       uris: http://localhost:9200
-  server:
-    port: 8080
+server:
+  port: 8080
 
   logging:
     level:
