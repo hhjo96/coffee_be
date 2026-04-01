@@ -13,6 +13,10 @@ public class Constants {
     public static final String MSG_SERVER_ERROR_OCCUR = "서버 오류가 발생하였습니다, 잠시 후 다시 시도 바랍니다";
     // endregion
 
+    // region 주문 관련 메시지
+    public static final String MSG_ORDER_LOCK_FAILED = "주문 오류가 발생했습니다. 잠시 후 다시 시도 바랍니다";
+
+    // endregion
 
     // region 포인트 관련 메시지
     public static final String MSG_POINT_CHARGE_UNDER_ZERO = "충전한 포인트가 0 이하입니다";
@@ -29,6 +33,7 @@ public class Constants {
 
     // 카트아이템 관련 메시지
     public static final String MSG_NOT_FOUND_CARTITEM = "카트아이템을 찾을 수 없습니다";
+    public static final String MSG_POINT_LOCK_CONFLICT = "포인트 오류가 발생했습니다. 잠시 후 다시 시도 바랍니다";
 
     // endregion
 }
