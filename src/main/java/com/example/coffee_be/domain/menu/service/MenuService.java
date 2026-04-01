@@ -48,6 +48,7 @@ public class MenuService {
 
 
     public MenuCursorResponse getAllV3Cursor(Long cursorId, int size) {
+        log.info("menu 전체 조회 v3");
         return menuRepository.getAllV3(cursorId, size);
     }
 

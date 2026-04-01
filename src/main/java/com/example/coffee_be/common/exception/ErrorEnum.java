@@ -28,7 +28,9 @@ public enum ErrorEnum {
 
 
     // 카트 관련
-    NOT_FOUND_CART(HttpStatus.NOT_FOUND, MSG_NOT_FOUND_CART)
+    NOT_FOUND_CART(HttpStatus.NOT_FOUND, MSG_NOT_FOUND_CART),
+    NOT_CART_OWNER(HttpStatus.BAD_REQUEST, MSG_NOT_CART_OWNER),
+    CART_EMPTY(HttpStatus.BAD_REQUEST, MSG_CART_EMPTY)
 
     ;
 

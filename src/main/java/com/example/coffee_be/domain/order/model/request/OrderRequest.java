@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 public class OrderRequest {
     @NotNull(message = "사용자번호는 필수입니다")
     Long customerId;
-    @NotNull(message = "메뉴번호는 필수입니다")
-    Long menuId;
+
+    // 카트 안의 카트아이템을 모두 주문
+    @NotNull(message = "카트는 필수입니다")
+    Long cartId;
 
 }
