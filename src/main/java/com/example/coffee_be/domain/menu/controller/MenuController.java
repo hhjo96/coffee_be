@@ -44,6 +44,7 @@ public class MenuController {
         return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.success("200", "메뉴 목록 조회: 3 성공", menuService.getAllV3Cursor(cursorId, size)));
     }
 
+    // todo: 단건1의 캐싱, 단건2의 캐싱이 동작하지 않고 있다! 확인필요
     // 단건: @Cacheable
     @GetMapping("/{menuId}/v1")
     public ResponseEntity<BaseResponse<MenuDto>> getOneV1Cacheable(@PathVariable Long menuId) {
@@ -56,6 +57,7 @@ public class MenuController {
         return ResponseEntity.status(HttpStatus.OK).body(BaseResponse.success("200", "메뉴 단건 조회: 2 성공", menuService.getOneV2Temp(menuId)));
     }
 
+    // todo: 수정시 메뉴의 존재여부 확인 필요
 
     // 수정: @Cacheable
     //수정시 캐시 삭제
