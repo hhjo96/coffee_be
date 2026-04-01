@@ -28,6 +28,8 @@ public class Constants {
 
     // 카트 관련 메시지
     public static final String MSG_NOT_FOUND_CART = "카트를 찾을 수 없습니다";
+    public static final String MSG_NOT_CART_OWNER = "카트의 소유자가 다릅니다";
+    public static final String MSG_CART_EMPTY = "카트에 메뉴를 담아주세요;";
     // endregion
 
 

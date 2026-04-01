@@ -2,7 +2,6 @@ package com.example.coffee_be.domain.pointHistory.service;
 
 import com.example.coffee_be.common.entity.PointHistory;
 import com.example.coffee_be.common.model.kafka.event.OrderCompletedEvent;
-import com.example.coffee_be.common.model.kafka.event.PointChargedEvent;
 import com.example.coffee_be.domain.point.enums.PointStatus;
 import com.example.coffee_be.domain.pointHistory.repository.PointHistoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,7 @@ public class PointHistoryService {
 
 
     public void savePointHistory(OrderCompletedEvent event) {
-        PointHistory history = PointHistory.createPointHistory(event.getUserId(), event.getPrice(), PointStatus.USED,
+        PointHistory history = PointHistory.createPointHistory(event.getUserId(), event.getTotalPrice(), PointStatus.USED,
                 LocalDateTime.parse(event.getPaidAt(), ISO_LOCAL_DATE_TIME));
         historyRepository.save(history);
     }

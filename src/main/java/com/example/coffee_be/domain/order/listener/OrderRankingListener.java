@@ -25,7 +25,13 @@ public class OrderRankingListener {
 
         log.info("[Consumer-Record] 주문 완료 이벤트 수신 - orderId={}, userId={}", event.getOrderId(), event.getUserId());
 
-        redisTemplate.opsForZSet()
-                .incrementScore(RANKING_KEY, event.getProductId().toString(), 1);
+        for (OrderCompletedEvent.OrderItemEvent item : event.getItems()) {
+            redisTemplate.opsForZSet()
+                    .incrementScore(RANKING_KEY,
+                            item.getMenuId().toString(),
+                            item.getQuantity());
+            log.info("[랭킹 업데이트] menuId={}, +{}점",
+                    item.getMenuId(), item.getQuantity());
+        }
     }
 }

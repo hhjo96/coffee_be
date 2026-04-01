@@ -1,11 +1,17 @@
 package com.example.coffee_be.domain.order.service;
 
+import com.example.coffee_be.common.entity.Cart;
+import com.example.coffee_be.common.entity.CartItem;
 import com.example.coffee_be.common.entity.Menu;
 import com.example.coffee_be.common.entity.Order;
 import com.example.coffee_be.common.exception.ErrorEnum;
 import com.example.coffee_be.common.exception.ServiceErrorException;
 import com.example.coffee_be.common.model.kafka.event.OrderCompletedEvent;
 import com.example.coffee_be.common.model.kafka.topic.KafkaTopics;
+import com.example.coffee_be.domain.cart.Service.CartService;
+import com.example.coffee_be.domain.cart.repository.CartRepository;
+import com.example.coffee_be.domain.cartItem.model.CartItemDto;
+import com.example.coffee_be.domain.cartItem.repository.CartItemRepository;
 import com.example.coffee_be.domain.menu.repository.MenuRepository;
 import com.example.coffee_be.domain.order.enums.OrderStatus;
 import com.example.coffee_be.domain.order.model.dto.OrderDto;
@@ -37,7 +43,10 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final MenuRepository menuRepository;
+    private final CartRepository cartRepository;
+    private final CartItemRepository cartItemRepository;
     private final PointService pointService;
+    private final CartService cartService;
     private final KafkaTemplate<String, OrderCompletedEvent> kafkaTemplate;
     private final RedissonClient redissonClient;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -75,36 +84,69 @@ public class OrderService {
 
     private OrderDto doOrder(OrderRequest request) {
         Long userId = request.getCustomerId();
-        Long menuId = request.getMenuId();
+        Long cartId = request.getCartId();
 
-        // 1. 메뉴 조회 (삭제된 메뉴 제외)
-        Menu menu = menuRepository.findById(menuId)
-                .filter(m -> m.getDeletedAt() == null)
-                .orElseThrow(() -> new ServiceErrorException(ErrorEnum.NOT_FOUND_MENU));
+        // 1. 카트 조회
+        Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new ServiceErrorException(ErrorEnum.NOT_FOUND_CART));
+        if (!cart.getCustomerId().equals(userId))
+            throw new ServiceErrorException(ErrorEnum.NOT_CART_OWNER);
 
-        // 2. 포인트 차감 (PointService)
-        pointService.usePointForOrder(userId, menu.getPrice());
+        // 2. 카트아이템 조회
+        List<CartItem> cartItems = cartItemRepository.findAllByCartId(cartId);
+        if (cartItems.isEmpty())
+            throw new ServiceErrorException(ErrorEnum.CART_EMPTY);
 
-        // 3. 주문 저장
-        Order order = Order.createOrder(userId, menuId, menu.getPrice());
+        // 3. 총금액 계산
+        int totalPrice = cartItems.stream()
+                .mapToInt(CartItem::totalPrice).sum();
+
+        // 4. 메뉴 조회 (삭제된 메뉴 제외)
+        for(CartItem item: cartItems) {
+            Long menuId = item.getMenuId();
+            Menu menu = menuRepository.findById(cartId)
+                    .filter(m -> m.getDeletedAt() == null)
+                    .orElseThrow(() -> new ServiceErrorException(ErrorEnum.NOT_FOUND_MENU));
+        }
+
+        // 5. 포인트 차감 (PointService)
+        pointService.usePointForOrder(userId, totalPrice);
+
+        // 6. 주문 저장
+        Order order = Order.createOrder(userId, cartId, totalPrice);
         Order savedOrder = orderRepository.save(order);
 
-        // 4. Kafka 이벤트 발행 (수집 플랫폼으로 실시간 전송)
+        // 7. Kafka 이벤트 발행 (수집 플랫폼으로 실시간 전송)
+        List<OrderCompletedEvent.OrderItemEvent> eventItems = cartItems.stream()
+                .map(item -> OrderCompletedEvent.OrderItemEvent.builder()
+                        .menuId(item.getMenuId())
+                        .menuName(item.getMenuName())
+                        .quantity(item.getQuantity())
+                        .price(item.getPrice())
+                        .totalPrice(item.totalPrice())
+                        .build()).toList();
+
+
         OrderCompletedEvent event = OrderCompletedEvent.builder()
                 .orderId(savedOrder.getId())
-                .productId(menuId)
+                .cartId(cartId)
                 .userId(userId)
-                .quantity(1)
-                .price(menu.getPrice())
+                .items(eventItems)
+                .totalPrice(totalPrice)
                 .paidAt(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .build();
 
         kafkaTemplate.send(KafkaTopics.TOPIC_ORDER_COMPLETED, String.valueOf(savedOrder.getId()), event);
 
-        log.info("[주문완료- 준비중] orderId={}, userId={}, menuId={}, price={}",
-                savedOrder.getId(), userId, menuId, menu.getPrice());
+        log.info("[주문완료 - 상태: 준비중] orderId={}, userId={}, menuId={}, price={}",
+                savedOrder.getId(), userId, cartId, totalPrice);
 
-        return new OrderDto(savedOrder.getId(), savedOrder.getCustomerId(), savedOrder.getMenuId(), savedOrder.getPrice(), OrderStatus.PREPARING);
+        // 8. 주문 완료 후 카트 삭제
+        cartService.deleteCartAfterOrder(cartId);
+
+        List<CartItemDto> itemDtos = cartItems.stream().map(CartItemDto::from).toList();
+
+        return new OrderDto(savedOrder.getId(), savedOrder.getCustomerId(), savedOrder.getCartId(), itemDtos, savedOrder.getPrice(), OrderStatus.PREPARING);
     }
 
     @Transactional(readOnly = true)
