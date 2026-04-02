@@ -7,15 +7,13 @@ import lombok.Getter;
 
 import java.util.List;
 
-@Getter
-@AllArgsConstructor
-public class OrderDto {
-
-    private Long orderId;
-    private Long customerId;
-    private Long cartId;
-    private List<CartItemDto> items;
-    private int totalPrice;
-    private OrderStatus orderStatus;
-
+public record OrderDto(
+        Long orderId,
+        Long customerId,
+        Long cartId,
+        List<CartItemDto> items,
+        int totalPrice,
+        OrderStatus orderStatus) {
 }
+
+

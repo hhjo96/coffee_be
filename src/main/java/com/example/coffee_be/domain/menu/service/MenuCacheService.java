@@ -2,6 +2,7 @@ package com.example.coffee_be.domain.menu.service;
 
 
 import com.example.coffee_be.domain.menu.model.dto.MenuDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -16,15 +17,17 @@ import java.util.concurrent.TimeUnit;
 public class MenuCacheService {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
     private static final String CACHE_POST_PREFIX = "menu:";
     private static final String RANKING_POST_KEY = "ranking:menus";
 
 
     // 캐시를 조회하는 기능
-    // 그냥 리턴하면 object 타입으로 리턴
     public MenuDto getPostCache(long menuId){
         String key = CACHE_POST_PREFIX + menuId;
-        return (MenuDto) redisTemplate.opsForValue().get(key);
+        Object value = redisTemplate.opsForValue().get(key);
+        if (value == null) return null;
+        return objectMapper.convertValue(value, MenuDto.class);
     }
 
     // 캐시를 저장하는 기능

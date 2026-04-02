@@ -4,16 +4,7 @@ import com.example.coffee_be.common.entity.CartItem;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-@Getter
-@AllArgsConstructor
-public class CartItemDto {
-    private Long id;
-    private Long menuId;
-    private String menuName;
-    private int price;
-    private int quantity;
-    private int totalPrice;
-
+public record CartItemDto(Long id, Long menuId, String menuName, int price, int quantity, int totalPrice) {
 
     public static CartItemDto from(CartItem item) {
         return new CartItemDto(

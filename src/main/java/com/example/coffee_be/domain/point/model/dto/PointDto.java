@@ -1,14 +1,6 @@
 package com.example.coffee_be.domain.point.model.dto;
 
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+public record PointDto(Long userId, int point) {
 
-@Getter
-@AllArgsConstructor
-public class PointDto {
-
-
-    private Long userId;
-    private int point;
 }

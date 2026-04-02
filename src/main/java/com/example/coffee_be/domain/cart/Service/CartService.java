@@ -113,7 +113,7 @@ public class CartService {
                 .toList();
 
         int totalPrice = itemDtos.stream()
-                .mapToInt(CartItemDto::getTotalPrice)
+                .mapToInt(CartItemDto::totalPrice)
                 .sum();
         return new CartDto(cart.getId(), cart.getCustomerId(), itemDtos, totalPrice);
     }
