@@ -45,5 +45,11 @@ public class Order extends BaseEntity {
         return order;
     }
 
+    public void prepareToReady() {
+        if(this.orderStatus == OrderStatus.PREPARING) {
+            this.orderStatus = OrderStatus.READY;
+        }
+
+    }
 
 }

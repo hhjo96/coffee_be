@@ -1,6 +1,7 @@
 package com.example.coffee_be.domain.order.repository;
 
 import com.example.coffee_be.common.entity.Order;
+import com.example.coffee_be.domain.order.enums.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,6 +12,7 @@ import java.util.List;
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
     // 삭제된 메뉴더라도 출력함(주문이 삭제된 경우는 미포함)
+    // 네이티브 쿼리에서 여러 컬럼을 반환할 경우 각 행이 object[]임
     @Query(value = """
             SELECT ci.menu_id, SUM(ci.quantity) AS order_count
             FROM orders o
@@ -24,4 +26,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Object[]> findPopularMenuIdsSince(
             @Param("since") LocalDateTime since,
             @Param("limit") int limit);
+
+
+
+    List<Order> findAllByOrderStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime dateTime);
 }
