@@ -48,5 +48,16 @@ server:
       org.springframework.ai: DEBUG
       com.study.springai: DEBUG
 
+portone:
+  api:
+    base-url: https://api.portone.io
+    secret: ${PORTONE_API_SECRET}
+  webhook:
+    secret: ${WEBHOOK_SECRET}
+  store:
+    id: ${PORTONE_STORE_ID}
+  channel:
+    kg-inicis: ${INICIS_KEY}
+
 app:
   init-data: true

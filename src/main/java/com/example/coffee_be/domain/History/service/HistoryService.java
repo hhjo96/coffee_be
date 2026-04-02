@@ -1,9 +1,9 @@
-package com.example.coffee_be.domain.pointHistory.service;
+package com.example.coffee_be.domain.History.service;
 
-import com.example.coffee_be.common.entity.PointHistory;
+import com.example.coffee_be.common.entity.History;
 import com.example.coffee_be.common.model.kafka.event.OrderCompletedEvent;
 import com.example.coffee_be.domain.point.enums.PointStatus;
-import com.example.coffee_be.domain.pointHistory.repository.PointHistoryRepository;
+import com.example.coffee_be.domain.History.repository.HistoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,14 +15,13 @@ import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PointHistoryService {
+public class HistoryService {
 
-    private final PointHistoryRepository historyRepository;
+    private final HistoryRepository historyRepository;
 
 
     public void savePointHistory(OrderCompletedEvent event) {
-        PointHistory history = PointHistory.createPointHistory(event.getUserId(), event.getTotalPrice(), PointStatus.USED,
-                LocalDateTime.parse(event.getPaidAt(), ISO_LOCAL_DATE_TIME));
+        History history = History.createUseHistory(event.getUserId(), event.getTotalPrice(), event.getOrderId());
         historyRepository.save(history);
     }
 

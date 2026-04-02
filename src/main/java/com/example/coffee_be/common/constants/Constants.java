@@ -38,4 +38,12 @@ public class Constants {
     public static final String MSG_POINT_LOCK_CONFLICT = "포인트 오류가 발생했습니다. 잠시 후 다시 시도 바랍니다";
 
     // endregion
+
+
+    // 결제 관련 메시지
+    public static final String MSG_PAYMENT_NOT_PAID = "결제가 완료되지 않았습니다";
+    public static final String MSG_PAYMENT_AMOUNT_MISMATCH = "결제 금액이 일치하지 않습니다";
+    public static final String MSG_PAYMENT_VERIFY_FAILED = "결제 검증에 실패했습니다";
+
+    // endregion
 }

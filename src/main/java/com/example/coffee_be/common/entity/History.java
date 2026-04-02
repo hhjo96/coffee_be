@@ -10,12 +10,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "point_histories"
+@Table(name = "histories"
         //,
         //   indexes = {
         //           @Index(name = "idx_auction_start", columnList = "start_at DESC, id DESC")
@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
 )
 @Getter
 @NoArgsConstructor
-public class PointHistory {
+public class History {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,13 +39,27 @@ public class PointHistory {
 
     private LocalDateTime payedAt;
 
-    public static PointHistory createPointHistory(Long customerId, int amount, PointStatus status, LocalDateTime payedAt ) {
-        PointHistory pointHistory = new PointHistory();
-        pointHistory.customerId = customerId;
-        pointHistory.amount = amount;
-        pointHistory.status = status;
-        pointHistory.payedAt = payedAt;
+    private Long paymentId; // 우리쪽 결제아이디
 
-        return pointHistory;
+    private Long orderId;
+
+    public static History createChargeHistory(Long customerId, int amount, Long paymentId) {
+        History h = new History();
+        h.customerId = customerId;
+        h.amount = amount;
+        h.status = PointStatus.CHARGED;
+        h.payedAt = LocalDateTime.now();
+        h.paymentId = paymentId;
+        return h;
+    }
+
+    public static History createUseHistory(Long customerId, int amount, Long orderId) {
+        History h = new History();
+        h.customerId = customerId;
+        h.amount = amount;
+        h.status = PointStatus.USED;
+        h.payedAt = LocalDateTime.now();
+        h.orderId = orderId;
+        return h;
     }
 }

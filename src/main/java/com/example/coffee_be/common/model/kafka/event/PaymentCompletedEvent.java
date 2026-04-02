@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PointChargedEvent {
-
-    private Long userId;       // 사용자 ID
-    private int amount;      // 충전된 금액
-    private String paidAt;     // 충전 완료 시각 (예: "2025-11-28T10:15:30")
+public class PaymentCompletedEvent {
+    private Long paymentId;
+    private Long customerId;
+    private int amount;
+    private String paidAt;
 }

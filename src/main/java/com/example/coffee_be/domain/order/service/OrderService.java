@@ -109,12 +109,12 @@ public class OrderService {
                     .orElseThrow(() -> new ServiceErrorException(ErrorEnum.NOT_FOUND_MENU));
         }
 
-        // 5. 포인트 차감 (PointService)
-        pointService.usePointForOrder(userId, totalPrice);
-
-        // 6. 주문 저장
+        // 5. 주문 저장
         Order order = Order.createOrder(userId, cartId, totalPrice);
         Order savedOrder = orderRepository.save(order);
+
+        // 6. 포인트 차감 (PointService)
+        pointService.usePointForOrder(userId, totalPrice, savedOrder.getId());
 
         // 7. Kafka 이벤트 발행 (수집 플랫폼으로 실시간 전송)
         List<OrderCompletedEvent.OrderItemEvent> eventItems = cartItems.stream()

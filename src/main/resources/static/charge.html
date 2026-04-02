@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>포인트 충전</title>
+<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #0e0e0e;
+    --surface: #181818;
+    --border: #2a2a2a;
+    --accent: #c8f135;
+    --accent-dim: #a8d020;
+    --text: #f0f0f0;
+    --muted: #666;
+    --error: #ff5f5f;
+    --success: #4ade80;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .header {
+    margin-bottom: 2.5rem;
+  }
+
+  .header .label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+  }
+
+  .field {
+    margin-bottom: 1.25rem;
+  }
+
+  .field label {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .field input {
+    width: 100%;
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .field input:focus {
+    border-color: var(--accent);
+  }
+
+  .field input::placeholder {
+    color: var(--muted);
+  }
+
+  .amounts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 1.25rem;
+  }
+
+  .amounts button {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .amounts button:hover,
+  .amounts button.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(200, 241, 53, 0.05);
+  }
+
+  .divider {
+    border: none;
+    border-top: 0.5px solid var(--border);
+    margin: 1.5rem 0;
+  }
+
+  .summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .summary .summary-label {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .summary .summary-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .btn {
+    width: 100%;
+    background: var(--accent);
+    color: #0e0e0e;
+    border: none;
+    border-radius: 8px;
+    padding: 0.9rem;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn:hover {
+    background: var(--accent-dim);
+    transform: translateY(-1px);
+  }
+
+  .btn:active {
+    transform: translateY(0);
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem 1.25rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    white-space: nowrap;
+    z-index: 100;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast.success { border-color: var(--success); color: var(--success); }
+  .toast.error { border-color: var(--error); color: var(--error); }
+
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="header">
+    <div class="label"><span class="status-dot"></span>Coffee Be</div>
+    <h1>포인트 충전</h1>
+  </div>
+
+  <div class="card">
+
+    <div class="field">
+      <label>고객 ID</label>
+      <input type="number" id="customerId" placeholder="고객 ID 입력" />
+    </div>
+
+    <div class="field">
+      <label>이름</label>
+      <input type="text" id="customerName" placeholder="홍길동" />
+    </div>
+
+    <div class="field">
+      <label>이메일</label>
+      <input type="email" id="email" placeholder="example@email.com" />
+    </div>
+
+    <div class="field">
+      <label>휴대폰 번호</label>
+      <input type="tel" id="phone" placeholder="01012345678" />
+    </div>
+
+    <div class="field">
+      <label>충전 금액</label>
+      <input type="number" id="amount" placeholder="직접 입력" />
+    </div>
+
+    <div class="amounts">
+      <button onclick="setAmount(5000)">5,000</button>
+      <button onclick="setAmount(10000)">10,000</button>
+      <button onclick="setAmount(30000)">30,000</button>
+      <button onclick="setAmount(50000)">50,000</button>
+      <button onclick="setAmount(100000)">100,000</button>
+      <button onclick="setAmount(200000)">200,000</button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="summary">
+      <span class="summary-label">충전 예정 금액</span>
+      <span class="summary-value" id="displayAmount">₩0</span>
+    </div>
+
+    <button class="btn" id="payBtn" onclick="startPayment()">결제하기</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ✅ 여기에 본인 값 입력
+  const STORE_ID = "store-7d77a131-55ec-4545-a6da-8799245cd4c9";
+  const CHANNEL_KEY = "channel-key-fceac525-b142-44fa-ace3-9b7866e1a46a";
+  const API_BASE = "http://localhost:8080";
+
+  function setAmount(val) {
+    document.getElementById('amount').value = val;
+    document.querySelectorAll('.amounts button').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    updateDisplay();
+  }
+
+  document.getElementById('amount').addEventListener('input', () => {
+    document.querySelectorAll('.amounts button').forEach(b => b.classList.remove('active'));
+    updateDisplay();
+  });
+
+  function updateDisplay() {
+    const val = parseInt(document.getElementById('amount').value) || 0;
+    document.getElementById('displayAmount').textContent = '₩' + val.toLocaleString();
+  }
+
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + type + ' show';
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  async function startPayment() {
+    const customerId = document.getElementById('customerId').value;
+    const customerName = document.getElementById('customerName').value;
+    const email = document.getElementById('email').value;
+    const phone = document.getElementById('phone').value;
+    const amount = parseInt(document.getElementById('amount').value);
+
+    if (!customerId) return showToast('고객 ID를 입력해주세요', 'error');
+    if (!customerName) return showToast('이름을 입력해주세요', 'error');
+    if (!email) return showToast('이메일을 입력해주세요', 'error');
+    if (!phone) return showToast('휴대폰 번호를 입력해주세요', 'error');
+    if (!amount || amount <= 0) return showToast('충전 금액을 입력해주세요', 'error');
+
+    const btn = document.getElementById('payBtn');
+    btn.disabled = true;
+    btn.textContent = '준비 중...';
+
+    try {
+      // 1. 백엔드에서 paymentId 발급
+      const prepareRes = await fetch(`${API_BASE}/api/payments/prepare`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: parseInt(customerId), amount })
+      });
+
+      const prepareData = await prepareRes.json();
+      const paymentId = prepareData.data.paymentId;
+
+      btn.textContent = '결제창 여는 중...';
+
+      // 2. 포트원 결제창 호출
+      const response = await PortOne.requestPayment({
+        storeId: STORE_ID,
+        channelKey: CHANNEL_KEY,
+        paymentId: paymentId,
+        orderName: `커피 포인트 충전 ${amount.toLocaleString()}원`,
+        totalAmount: amount,
+        currency: 'KRW',
+        payMethod: 'CARD',
+        customer: {
+          fullName: customerName,
+          email: email,
+          phoneNumber: phone,
+        }
+      });
+
+      if (response.code) {
+        showToast('결제가 취소되었습니다', 'error');
+        return;
+      }
+
+      btn.textContent = '결제 검증 중...';
+
+      // 3. 백엔드에 결제 검증 요청
+      const confirmRes = await fetch(`${API_BASE}/api/payments/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId: paymentId,
+          customerId: parseInt(customerId),
+          amount: amount
+        })
+      });
+
+      const confirmData = await confirmRes.json();
+
+      if (confirmRes.ok) {
+        showToast(`₩${amount.toLocaleString()} 충전 완료!`, 'success');
+        document.getElementById('amount').value = '';
+        document.getElementById('displayAmount').textContent = '₩0';
+        document.querySelectorAll('.amounts button').forEach(b => b.classList.remove('active'));
+      } else {
+        showToast(confirmData.message || '결제 검증 실패', 'error');
+      }
+
+    } catch (e) {
+      console.error(e);
+      showToast('오류가 발생했습니다', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '결제하기';
+    }
+  }
+</script>
+</body>
+</html>
