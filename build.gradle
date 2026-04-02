@@ -43,6 +43,9 @@ dependencies {
 
     implementation 'org.springframework.ai:spring-ai-starter-model-openai'
 
+    // 결제
+    implementation 'io.portone:server-sdk:0.23.0'
+
     //querydsl
     implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
     annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"

@@ -1,6 +1,9 @@
 package com.example.coffee_be.common.config;
 
 import com.example.coffee_be.common.model.kafka.event.OrderCompletedEvent;
+import com.example.coffee_be.common.model.kafka.event.PaymentCompletedEvent;
+import com.example.coffee_be.common.model.kafka.event.PointChargedEvent;
+import com.example.coffee_be.common.model.kafka.event.PointUsedEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,23 +25,32 @@ public class KafkaProducerConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-    // PaymentCompletedEvent ProducerFactory
-
-    @Bean
-    public ProducerFactory<String, OrderCompletedEvent> eventProducerFactory() {
+    private Map<String, Object> baseProps() {
         Map<String, Object> props = new HashMap<>();
-
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-
-        return new DefaultKafkaProducerFactory<>(props);
+        return props;
     }
 
     @Bean
-    public KafkaTemplate<String, OrderCompletedEvent> paymentCompletedEventKafkaTemplate() {
-        return new KafkaTemplate<>(eventProducerFactory());
+    public KafkaTemplate<String, OrderCompletedEvent> orderCompletedKafkaTemplate() {
+        return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(baseProps()));
     }
 
+    @Bean
+    public KafkaTemplate<String, PointChargedEvent> pointChargedKafkaTemplate() {
+        return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(baseProps()));
+    }
+
+    @Bean
+    public KafkaTemplate<String, PaymentCompletedEvent> paymentCompletedKafkaTemplate() {
+        return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(baseProps()));
+    }
+
+    @Bean
+    public KafkaTemplate<String, PointUsedEvent> pointUsedKafkaTemplate() {
+        return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(baseProps()));
+    }
 
 }
