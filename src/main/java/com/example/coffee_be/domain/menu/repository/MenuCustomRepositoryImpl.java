@@ -63,7 +63,7 @@ public class MenuCustomRepositoryImpl implements MenuCustomRepository {
         boolean hasNext = menus.size() > size;
         if (hasNext) menus.remove(menus.size() - 1);  // 1개 제거
 
-        Long nextCursorId = hasNext ? menus.get(menus.size() - 1).getId() : null;
+        Long nextCursorId = hasNext ? menus.get(menus.size() - 1).id() : null;
 
         return new MenuCursorResponse(menus, nextCursorId, hasNext);
     }
