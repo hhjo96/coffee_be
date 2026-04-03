@@ -44,6 +44,11 @@ public class Constants {
     public static final String MSG_PAYMENT_NOT_PAID = "결제가 완료되지 않았습니다";
     public static final String MSG_PAYMENT_AMOUNT_MISMATCH = "결제 금액이 일치하지 않습니다";
     public static final String MSG_PAYMENT_VERIFY_FAILED = "결제 검증에 실패했습니다";
+    public static final String MSG_PAYMENT_NOT_FOUND = "결제를 찾을 수 없습니다";
 
     // endregion
+
+
+    // 웹훅 관련 메시지
+    public static final String MSG_WEBHOOK_SIGNATURE_INVALID = "웹훅 검증에 실패했습니다";
 }

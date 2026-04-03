@@ -29,12 +29,33 @@ public class Payment extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
 
+    @Version
+    private Long version;
+
     public static Payment create(Long customerId, String paymentId, int amount) {
         Payment payment = new Payment();
         payment.customerId = customerId;
         payment.paymentId = paymentId;
         payment.amount = amount;
-        payment.status = PaymentStatus.PAID;
+        payment.status = PaymentStatus.READY;
         return payment;
+    }
+
+    public void paid() {
+        if(this.status == PaymentStatus.READY) {
+            this.status = PaymentStatus.PAID;
+        }
+    }
+
+    public void failed() {
+        if (this.status == PaymentStatus.READY) {
+            this.status = PaymentStatus.FAILED;
+        }
+    }
+
+    public void cancelled() {
+        if (this.status == PaymentStatus.PAID) {
+            this.status = PaymentStatus.CANCELLED;
+        }
     }
 }
