@@ -1,32 +1,17 @@
 package com.example.coffee_be.domain.webhook.service;
 
-import com.example.coffee_be.common.entity.Payment;
-import com.example.coffee_be.common.exception.ServiceErrorException;
-import com.example.coffee_be.common.external.PortOneClient;
-import com.example.coffee_be.common.external.PortOnePaymentResponse;
-import com.example.coffee_be.common.model.kafka.event.PaymentCompletedEvent;
-import com.example.coffee_be.common.model.kafka.topic.KafkaTopics;
-import com.example.coffee_be.domain.payment.enums.PaymentStatus;
-import com.example.coffee_be.domain.payment.repository.PaymentRepository;
-import com.example.coffee_be.domain.point.service.PointService;
 import com.example.coffee_be.domain.webhook.repository.WebhookRepository;
 import com.example.coffee_be.domain.webhook.verifier.PortOneSdkWebhookVerifier;
 import io.portone.sdk.server.errors.WebhookVerificationException;
 import io.portone.sdk.server.webhook.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
-import static com.example.coffee_be.common.exception.ErrorEnum.PAYMENT_NOT_PAID;
-import static com.example.coffee_be.common.exception.ErrorEnum.PAYMENT_VERIFY_FAILED;
-
-// 웹훅 자체를 처리하는 매서드와 웹훅을 받아서 비즈니스로직 처리하는 매서드로 나눔
+// 웹훅을 잘 받았음을 처리
 
 @Service
 @RequiredArgsConstructor
@@ -35,11 +20,8 @@ import static com.example.coffee_be.common.exception.ErrorEnum.PAYMENT_VERIFY_FA
 public class WebhookService {
 
     private final PortOneSdkWebhookVerifier verifier;
-    private final PortOneClient portOneClient;
-    private final PaymentRepository paymentRepository;
-    private final PointService pointService;
+    private final WebhookPointService webhookPointService;
     private final WebhookRepository webhookRepository;
-    private final KafkaTemplate<String, PaymentCompletedEvent> kafkaTemplate;
 
     // 서명 검증 + 역직렬화 (컨트롤러에서 호출)
     public Webhook verifyAndParse(String rawBody, String id, String sig, String ts) throws WebhookVerificationException {
@@ -48,12 +30,12 @@ public class WebhookService {
 
     // 중복수신방지, 웹훅 저장, 성공/실패 업데이트
     public void process(Webhook webhook, String webhookId) {
+        // 포트원웹훅이 결제 타입일때만 처리
         if (webhook instanceof WebhookTransaction transaction) {
             WebhookTransactionData data = transaction.getData();
             log.info(
-                    "[웹훅] VERIFIED Transaction paymentId={} transactionId={}  timestamp={}",
+                    "[웹훅] 처리 시작 paymentId={} timestamp={}",
                     data.getPaymentId(),
-                    data.getTransactionId(),
                     transaction.getTimestamp()
             );
 
@@ -67,15 +49,28 @@ public class WebhookService {
 
             // 저장
             com.example.coffee_be.common.entity.Webhook savedWebhook =
-            webhookRepository.save(com.example.coffee_be.common.entity.Webhook.create(webhookId, paymentId));
+                    webhookRepository.save(com.example.coffee_be.common.entity.Webhook.create(webhookId, paymentId));
 
             try {
                 if (webhook instanceof WebhookTransactionPaid) {
-                    handlePaid(paymentId);                          // 결제 완료 -> 다음 처리
+                    webhookPointService.handlePaid(paymentId);
+
+                } else if (webhook instanceof WebhookTransactionFailed) {
+                    webhookPointService.handleFailed(paymentId); // Payment FAILED 처리
+
+                } else if (webhook instanceof WebhookTransactionCancelled) {
+                    webhookPointService.handleCancelled(paymentId); // Payment CANCELLED 처리
+
                 } else {
+                    // Ready 등 처리 불필요한 타입
                     log.info("[웹훅] 기타 타입 - {}", webhook.getClass().getSimpleName());
                 }
-                savedWebhook.processed();
+                savedWebhook.processed(); // 어떤 타입이든 정상 수신됐으면 PROCESSED
+
+            } catch (ObjectOptimisticLockingFailureException e) {
+                // confirm()이 먼저 커밋한 것 → 정상 케이스
+                log.info("[웹훅] confirm()이 먼저 처리 완료 - paymentId={}", paymentId);
+                savedWebhook.processed(); // 웹훅 자체는 정상 처리된 것
 
             } catch (Exception e) {
                 savedWebhook.failed();     // FAILED 로 업데이트
@@ -86,45 +81,4 @@ public class WebhookService {
 
     }
 
-    // 결제 객체 저장, 포인트 충전, 카프카이벤트 발행
-    private void handlePaid(String paymentId) {
-
-        // 이미 paid 상태인지 확인
-        Payment payment = paymentRepository.findByPaymentId(paymentId)
-                .orElseThrow(() -> new ServiceErrorException(PAYMENT_VERIFY_FAILED));
-
-        if (payment.getStatus() == PaymentStatus.PAID) {
-            log.info("[웹훅] 이미 처리된 결제 스킵 - paymentId={}", paymentId);
-            return;
-        }
-
-        // customerId 확인
-        Long customerId = payment.getCustomerId();
-
-        // PortOne API 재조회
-        PortOnePaymentResponse res = portOneClient.getPayment(paymentId);
-        if (!res.isPaid()) throw new ServiceErrorException(PAYMENT_NOT_PAID);
-
-        // 다 통과했으면 결제완료 상태로 수정(낙관적 락)
-        try {
-            payment.paid();
-
-            int amount = res.amount().total().intValue();
-
-            // 포인트 충전 + PointChargedEvent 발행
-            pointService.chargePointWithPayment(customerId, amount, payment.getId());
-
-            // PaymentCompletedEvent 발행
-            kafkaTemplate.send(KafkaTopics.TOPIC_PAYMENT_COMPLETED, String.valueOf(payment.getId()),
-                    PaymentCompletedEvent.builder()
-                            .paymentId(payment.getId())
-                            .customerId(customerId)
-                            .amount(amount)
-                            .paidAt(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
-                            .build());
-        } catch (ObjectOptimisticLockingFailureException e) {
-            // confirm()이 동시에 먼저 커밋한 것 → 정상 케이스, 스킵
-            log.info("[웹훅] 결제가 먼저 처리 완료 - paymentId={}", paymentId);
-        }
-    }
 }

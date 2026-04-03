@@ -43,7 +43,7 @@ public class PaymentService {
     public PreparePaymentDto prepare(PreparePaymentRequest request) {
         String paymentId = "payment-" + UUID.randomUUID().toString().replace("-", "").substring(0, 32);
 
-        log.info("[결제준비] paymentId={}, customerId={}, amount={}",
+        log.info("[결제] paymentId={}, customerId={}, amount={}",
                 paymentId, request.getCustomerId(), request.getAmount());
 
         paymentRepository.save(Payment.create(request.getCustomerId(), paymentId, request.getAmount()));
@@ -62,7 +62,7 @@ public class PaymentService {
 
         // 웹훅이 먼저 처리했으면 스킵
         if (payment.getStatus() == PaymentStatus.PAID) {
-            log.info("[결제확인] 이미 처리된 결제 - paymentId={}", request.getPaymentId());
+            log.info("[결제] 이미 처리된 결제 - paymentId={}", request.getPaymentId());
             return new ConfirmPaymentDto(payment.getId(), payment.getPaymentId(),
                     payment.getCustomerId(), payment.getAmount(), "PAID");
         }
@@ -99,14 +99,14 @@ public class PaymentService {
 
         } catch (ObjectOptimisticLockingFailureException e) {
             // 웹훅이 동시에 먼저 커밋한 것 → 정상 케이스
-            log.info("[결제확인] 웹훅이 먼저 처리 완료 - paymentId={}", request.getPaymentId());
+            log.info("[결제] 웹훅이 먼저 처리 완료 - paymentId={}", request.getPaymentId());
             Payment latest = paymentRepository.findByPaymentId(request.getPaymentId())
                     .orElseThrow(() -> new ServiceErrorException(PAYMENT_VERIFY_FAILED));
             return new ConfirmPaymentDto(latest.getId(), latest.getPaymentId(),
                     latest.getCustomerId(), latest.getAmount(), "PAID");
         }
 
-        log.info("[결제+포인트충전 완료] paymentId={}, customerId={}, amount={}",
+        log.info("[결제] 결제+포인트충전 완료 paymentId={}, customerId={}, amount={}",
                 request.getPaymentId(), request.getCustomerId(), request.getAmount());
 
         return new ConfirmPaymentDto(
