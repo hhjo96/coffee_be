@@ -1,13 +1,13 @@
 package com.example.coffee_be.domain.order.service;
 
-import com.example.coffee_be.common.entity.Cart;
-import com.example.coffee_be.common.entity.CartItem;
-import com.example.coffee_be.common.entity.Menu;
-import com.example.coffee_be.common.entity.Order;
+// 레디스 잔액검증, db 차감
+
+import com.example.coffee_be.common.entity.*;
 import com.example.coffee_be.common.exception.ErrorEnum;
 import com.example.coffee_be.common.exception.ServiceErrorException;
 import com.example.coffee_be.common.model.kafka.event.OrderCompletedEvent;
 import com.example.coffee_be.common.model.kafka.topic.KafkaTopics;
+import com.example.coffee_be.domain.History.repository.HistoryRepository;
 import com.example.coffee_be.domain.cart.Service.CartService;
 import com.example.coffee_be.domain.cart.repository.CartRepository;
 import com.example.coffee_be.domain.cartItem.model.CartItemDto;
@@ -15,49 +15,64 @@ import com.example.coffee_be.domain.cartItem.repository.CartItemRepository;
 import com.example.coffee_be.domain.menu.repository.MenuRepository;
 import com.example.coffee_be.domain.order.enums.OrderStatus;
 import com.example.coffee_be.domain.order.model.dto.OrderDto;
-import com.example.coffee_be.domain.order.model.dto.PopularMenuDto;
 import com.example.coffee_be.domain.order.model.request.OrderRequest;
 import com.example.coffee_be.domain.order.repository.OrderRepository;
-import com.example.coffee_be.domain.point.service.PointService;
+import com.example.coffee_be.domain.point.repository.PointRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import static com.example.coffee_be.common.exception.ErrorEnum.NOT_FOUND_POINT;
+import static com.example.coffee_be.common.exception.ErrorEnum.POINT_INSUFFICIENT;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 @Slf4j
-public class OrderService {
+@Transactional
+public class OrderLuaService {
+
+    // 주문이 들어오면 루아스크립트를 활용해 현재 사용자 포인트를 차감하고 주문 객체 생성함
+    // 잔액이 레디스에 있는 경우 사용, 없을 경우 db 조회
 
     private final OrderRepository orderRepository;
-    private final MenuRepository menuRepository;
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
-    private final PointService pointService;
+    private final MenuRepository menuRepository;
     private final CartService cartService;
-    private final KafkaTemplate<String, OrderCompletedEvent> kafkaTemplate;
+    private final PointRepository pointRepository;
+    private final HistoryRepository historyRepository;
     private final RedissonClient redissonClient;
     private final RedisTemplate<String, Object> redisTemplate;
-    private static final int POPULAR_MENU_LIMIT = 3;
-    private static final String LOCK_ORDER_PREFIX = "lock:order:";
-    private static final String RANKING_KEY = "ranking:menus";
+    private final StringRedisTemplate stringRedisTemplate;
+    private final KafkaTemplate<String, OrderCompletedEvent> kafkaTemplate;
 
+    private static final String LOCK_ORDER_PREFIX = "lock:order:";
+    private static final String BALANCE_KEY_PREFIX = "point:balance:";
+
+    // Lua 스크립트
+    // 잔액을 읽어서 값이 없으면 -1(캐시에없다), 값이 차감할 금액보다 적으면 -2, 아니면 차감
+    // 주문 결제 시 → Lua로 Redis 잔액 사전 검증 → DB 비관적락으로 실제 차감
+    private static final String MINUS_SCRIPT =
+            "local b = tonumber(redis.call('GET', KEYS[1]))\n" +
+                    "if b == nil then return -1 end\n" +
+                    "if b < tonumber(ARGV[1]) then return -2 end\n" +
+                    "return redis.call('DECRBY', KEYS[1], ARGV[1])";
 
     // 주문
-    // 포인트 차감은 pointService.userPointForOrder()
-    public OrderDto order(OrderRequest request) {
+    // 포인트 차감은 루아스크립트
+    public OrderDto orderLua(OrderRequest request) {
         Long userId = request.getCustomerId();
         // 락 키를 userId 기준으로 설정 — 동일 유저의 동시 주문 요청 직렬화
         String lockKey = LOCK_ORDER_PREFIX + userId;
@@ -109,15 +124,28 @@ public class OrderService {
                     .orElseThrow(() -> new ServiceErrorException(ErrorEnum.NOT_FOUND_MENU));
         }
 
+        // Lua: Redis로 잔액 사전 검증, 차감
+        Long luaResult = stringRedisTemplate.execute(
+                new DefaultRedisScript<>(MINUS_SCRIPT, Long.class),
+                List.of("point:balance:" + userId),
+                String.valueOf(totalPrice)
+        );
+
+        // 잔액을 읽어서 값이 없으면 -1(캐시에없다), 값이 차감할 금액보다 적으면 -2, 아니면 차감
+        if (luaResult == null || luaResult == -1L) {
+            validatePointFromDb(userId, totalPrice); // 캐시 미스 → DB fallback
+        } else if (luaResult == -2L) {
+            throw new ServiceErrorException(POINT_INSUFFICIENT);
+        }
+
+        log.info("[Lua] Redis 잔액 검증 결과 - userId={}, result={}", userId, luaResult);
+
         // 5. 주문 저장
         Order order = Order.createOrder(userId, cartId, totalPrice);
         Order savedOrder = orderRepository.save(order);
 
-        // 6. 포인트 차감 (PointService)
-        pointService.usePointForOrder(userId, totalPrice, savedOrder.getId());
-
-        log.info("[주문] 포인트 차감 orderId={}, userId={},  price={}",
-                savedOrder.getId(), userId, totalPrice);
+        // 6. 포인트 차감
+        minusPointFromDb(userId, totalPrice, savedOrder.getId());
 
         // 7. Kafka 이벤트 발행 (수집 플랫폼으로 실시간 전송)
         List<OrderCompletedEvent.OrderItemEvent> eventItems = cartItems.stream()
@@ -141,7 +169,7 @@ public class OrderService {
 
         kafkaTemplate.send(KafkaTopics.TOPIC_ORDER_COMPLETED, String.valueOf(savedOrder.getId()), event);
 
-        log.info("[주문] 상태: 준비중 orderId={}, userId={}, price={}",
+        log.info("[주문-Lua] 상태: 준비중 orderId={}, userId={}, price={}",
                 savedOrder.getId(), userId, totalPrice);
 
         // 8. 주문 완료 후 카트 삭제
@@ -152,52 +180,24 @@ public class OrderService {
         return new OrderDto(savedOrder.getId(), savedOrder.getCustomerId(), savedOrder.getCartId(), itemDtos, savedOrder.getPrice(), OrderStatus.PREPARING);
     }
 
-    @Transactional(readOnly = true)
-    public List<PopularMenuDto> getPopularMenus() {
-        Set<Object> cached = redisTemplate.opsForZSet().reverseRange(RANKING_KEY, 0, POPULAR_MENU_LIMIT - 1);
-
-        // 캐시에 3개이상 있으면
-        if (cached != null && cached.size() == POPULAR_MENU_LIMIT) {
-            log.info("[인기메뉴] Redis 캐시 히트");
-            return buildPopularMenuDtoFromCache(cached);
-        }
-        // 캐시에 3개미만이거나 없으면
-        log.info("[인기메뉴] 캐시 미스 → DB 집계");
-        return refreshPopularMenuCache();
+    // Redis 캐시 미스 시 DB에서 잔액만 확인
+    private void validatePointFromDb(Long userId, int price) {
+        Point point = pointRepository.findByCustomerId(userId)
+                .orElseThrow(() -> new ServiceErrorException(NOT_FOUND_POINT));
+        if (point.getBalance() < price)
+            throw new ServiceErrorException(POINT_INSUFFICIENT);
     }
-    private List<PopularMenuDto> buildPopularMenuDtoFromCache(Set<Object> menuIds) {
-        List<PopularMenuDto> result = new ArrayList<>();
-        for (Object menuIdTemp : menuIds) {
-            Long menuId = Long.parseLong(menuIdTemp.toString());
-            Double score = redisTemplate.opsForZSet().score(RANKING_KEY, menuIdTemp);
 
-            menuRepository.findById(menuId).filter(m -> m.getDeletedAt() == null)
-                    .ifPresent(menu -> result.add(
-                    new PopularMenuDto(menu.getId(), menu.getName(), menu.getPrice(),
-                            score != null ? score.longValue() : 0L
-                    )));
-        }
-        return result;
-    }
-    private List<PopularMenuDto> refreshPopularMenuCache() {
-        LocalDateTime since = LocalDateTime.now().minusDays(7);
-        List<Object[]> rows = orderRepository.findPopularMenuIdsSince(since, POPULAR_MENU_LIMIT);
-        List<PopularMenuDto> result = new ArrayList<>();
+    // DB 비관적 락으로 포인트 차감 + Redis 캐시 최신화
+    private void minusPointFromDb(Long userId, int price, Long orderId) {
+        Point point = pointRepository.findByCustomerIdWithPes(userId)
+                .orElseThrow(() -> new ServiceErrorException(NOT_FOUND_POINT));
+        point.use(price);
+        historyRepository.save(History.createUseHistory(userId, price, orderId));
+        // DB 차감 후 Redis 캐시 최신화
 
-        redisTemplate.delete(RANKING_KEY);
-        for (Object[] row : rows) {
-            Long menuId = ((Number) row[0]).longValue();
-            Long count = ((Number) row[1]).longValue();
-            menuRepository.findById(menuId)
-                    .filter(m -> m.getDeletedAt() == null)
-                    .ifPresent(menu -> {
-                        redisTemplate.opsForZSet().add(RANKING_KEY, menuId.toString(), count);
-                        result.add(new PopularMenuDto(
-                                menu.getId(), menu.getName(), menu.getPrice(), count));
-                    });
-        }
-        redisTemplate.expire(RANKING_KEY, 60, TimeUnit.SECONDS);
-        log.info("[인기메뉴] ZSet 갱신 완료, {}개", result.size());
-        return result;
+        // 기존 레디스템플릿 사용시 시리얼라이저 "" 파싱 문제가 있어서 스트링레디스템플릿 사용
+        stringRedisTemplate.opsForValue().set(BALANCE_KEY_PREFIX + userId, String.valueOf(point.getBalance()));
+        log.info("[주문-Lua] DB 포인트 차감 완료 - userId={}, balance={}", userId, point.getBalance());
     }
 }
