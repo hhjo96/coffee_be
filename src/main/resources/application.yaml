@@ -40,8 +40,12 @@ spring:
           max-tokens: 2000
     elasticsearch:
       uris: http://localhost:9200
+  task:
+    scheduling:
+      enabled: true
 server:
   port: 8080
+
 
   logging:
     level:

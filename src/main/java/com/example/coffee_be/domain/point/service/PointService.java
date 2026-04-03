@@ -121,20 +121,7 @@ public class PointService {
         }
     }
 
-
-    // 5. Lua 스크립트
-    // 잔액을 읽어서 값이 없으면 -1(캐시에없다), 값이 차감할 금액보다 적으면 -2, 아니면 차감
-
-    // 현재 레디스에 point:balance:{userId} 가 없으므로
-    // todo: 충전 시 → DB 저장 + point:balance:{userId} Redis에도 씀 (캐시 세팅)
-    // 주문 결제 시 → Lua로 Redis 잔액 사전 검증 → DB 비관적락으로 실제 차감
-    private static final String DEDUCT_SCRIPT =
-            "local b = tonumber(redis.call('GET', KEYS[1]))\n" +
-                    "if b == nil then return -1 end\n" +
-                    "if b < tonumber(ARGV[1]) then return -2 end\n" +
-                    "return redis.call('DECRBY', KEYS[1], ARGV[1])";
-
-    // 6. 포인트 써서 주문
+    // 포인트 써서 주문
     // 최종선택: 분산락 + 비관적락으로 정합성 보장
     public PointDto usePointForOrder(Long userId, int price, Long orderId) {
         RLock lock = redissonClient.getLock(LOCK_POINT_PREFIX + userId);
