@@ -38,6 +38,9 @@ spring:
           model: gpt-4o-mini
           temperature: 0.7
           max-tokens: 2000
+      embedding:
+        options:
+          model: text-embedding-3-small
     elasticsearch:
       uris: http://localhost:9200
   task:
