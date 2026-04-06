@@ -43,12 +43,40 @@ public class MenuSearchService {
     public List<MenuDto> searchByES(String keyword) {
         log.info("[ES] 메뉴 검색 - keyword={}", keyword);
 
-        // 기본값 0~2글자는 일치, 3~5글자 짧은 단어는 편집거리 1, 6글자 이상 긴 단어는 2까지 허용한다고 함(현재 세팅한게 없으므로 기본값 유지)
-        // "name" 필드에서 keyword 에 있는 걸로 검색하는 것
-        Criteria criteria = new Criteria("name").fuzzy(keyword);
+//        // 기본값 0~2글자는 일치, 3~5글자 짧은 단어는 편집거리 1, 6글자 이상 긴 단어는 2까지 허용한다고 함(현재 세팅한게 없으므로 기본값 유지)
+//        // "name" 필드에서 keyword 에 있는 걸로 검색하는 것
+
+/*  이렇게 치면 json 축약어를 안 탄다!! 참고용으로 남겨둠
+//        Criteria criteria = new Criteria("name").fuzzy(keyword);
 
         // ES에 날릴 쿼리 만들기(점수 높은순 5개 자동정렬)
         Query query = new CriteriaQuery(criteria).setPageable(PageRequest.of(0, 5));
+
+ */
+
+        Query query = NativeQuery.builder()
+                .withQuery(q -> q
+                        .bool(b -> b
+                                .should(s -> s
+                                        // 동의어 검색용 (아아 → 아이스아메리카노)
+                                        .match(m -> m
+                                                .field("name")
+                                                .query(keyword)
+                                                .analyzer("nori_analyzer")
+                                        )
+                                )
+                                .should(s -> s
+                                        // fuzzy 검색용 (아메리가노 → 아메리카노)
+                                        .fuzzy(f -> f
+                                                .field("name")
+                                                .value(keyword)
+                                                .fuzziness("AUTO") // auto 라고 쓸 경우 단어길이에 따라 자동으로 바뀌고, 1이라고 쓰면 편집거리 1만 허용
+                                        )
+                                )
+                        )
+                ) // 두개를 or 검색한다고 함
+                .withPageable(PageRequest.of(0, 5))
+                .build();
 
         // searchHits: 결과+score 목록
         SearchHits<MenuDocument> hits =

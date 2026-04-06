@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: coffee_be
+  datasource:
+    url: jdbc:mysql://localhost:3306/coffee_be
+    username: root
+    password: 1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 20
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: false
+        default_batch_fetch_size: 100
+    defer-datasource-initialization: true
+  data:
+    redis:
+      port: 6379
+      host: localhost
+  kafka:
+    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+  ai:
+    # ChatClient auto-configuration 비활성화 (AiConfig에서 수동 생성)
+    chat:
+      client:
+        enabled: false
+
+    # OpenAI (기본)
+    openai:
+      api-key: test
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.7
+          max-tokens: 2000
+      embedding:
+        options:
+          model: text-embedding-3-small
+    elasticsearch:
+      uris: http://localhost:9200
+  task:
+    scheduling:
+      enabled: true
+server:
+  port: 8080
+
+
+  logging:
+    level:
+      org.springframework.ai: DEBUG
+      com.study.springai: DEBUG
+
+portone:
+  api:
+    base-url: https://api.portone.io
+    secret: test
+  webhook:
+    secret: test
+  store:
+    id: test
+  channel:
+    kg-inicis: test
+
+app:
+  init-data: false
