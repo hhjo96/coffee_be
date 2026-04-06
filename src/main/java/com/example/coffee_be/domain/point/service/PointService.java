@@ -5,6 +5,7 @@ import com.example.coffee_be.common.entity.Point;
 import com.example.coffee_be.common.exception.ErrorEnum;
 import com.example.coffee_be.common.exception.ServiceErrorException;
 import com.example.coffee_be.common.model.kafka.event.PointChargedEvent;
+import com.example.coffee_be.common.model.kafka.event.PointUsedEvent;
 import com.example.coffee_be.common.model.kafka.topic.KafkaTopics;
 import com.example.coffee_be.domain.point.enums.PointStatus;
 import com.example.coffee_be.domain.point.model.dto.PointDto;
@@ -41,7 +42,7 @@ public class PointService {
     private final PointRepository pointRepository;
     private final HistoryRepository historyRepository;
 
-    private final KafkaTemplate<String, PointChargedEvent> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private final RedissonClient redissonClient;
 
@@ -135,6 +136,17 @@ public class PointService {
             point.use(price);
 
             historyRepository.save(History.createUseHistory(userId, price, orderId));
+
+            // 포인트차감 이벤트 발행 추가
+            log.info("[포인트] 포인트 차감 이벤트 발행" );
+            PointUsedEvent event = PointUsedEvent.builder()
+                    .userId(userId)
+                    .orderId(orderId)
+                    .amount(price)
+                    .paidAt(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    .build();
+            kafkaTemplate.send(KafkaTopics.TOPIC_POINT_USED, String.valueOf(userId), event);
+
 
             return new PointDto(userId, point.getBalance());
 

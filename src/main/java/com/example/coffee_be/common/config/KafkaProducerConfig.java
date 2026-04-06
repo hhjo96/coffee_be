@@ -53,4 +53,10 @@ public class KafkaProducerConfig {
         return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(baseProps()));
     }
 
+    // 포인트 사용, 충전이벤트르 합친것
+    @Bean
+    public KafkaTemplate<String, Object> kafkaTemplate() {
+        return new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(baseProps()));
+    }
+
 }

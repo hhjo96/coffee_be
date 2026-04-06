@@ -16,17 +16,6 @@ import static com.example.coffee_be.common.model.kafka.topic.KafkaTopics.*;
 @RequiredArgsConstructor
 public class PaymentListener {
 
-    // 포인트충전 컨슈머
-    @KafkaListener(
-            topics = TOPIC_POINT_CHARGED,
-            groupId = "point-charged-group",
-            containerFactory = "pointChargedKafkaListenerContainerFactory"
-    )
-    public void consumePointCharged(PointChargedEvent event) {
-        log.info("[포인트충전 이벤트 수신] userId={}, amount={}",
-                event.getUserId(), event.getAmount());
-    }
-
     // 결제완료 컨슈머
     @KafkaListener(
         topics = TOPIC_PAYMENT_COMPLETED,
