@@ -129,6 +129,9 @@ services:
     networks:
       - app-net
 
+  # --------------------------
+  # elasticSearch
+  # --------------------------
 
   es01:
     image: elasticsearch:8.17.4
@@ -140,8 +143,17 @@ services:
       - cluster.initial_master_nodes=es01,es02,es03
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    command: >
+      bash -c "
+        if [ ! -d /usr/share/elasticsearch/plugins/analysis-nori ]; then
+          bin/elasticsearch-plugin install analysis-nori --batch;
+        fi &&
+        /usr/local/bin/docker-entrypoint.sh
+      "
     ports:
       - "9200:9200"
+    volumes:
+      - es01_data:/usr/share/elasticsearch/data
     networks:
       - app-net
 
@@ -155,6 +167,15 @@ services:
       - cluster.initial_master_nodes=es01,es02,es03
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    command: >
+      bash -c "
+        if [ ! -d /usr/share/elasticsearch/plugins/analysis-nori ]; then
+          bin/elasticsearch-plugin install analysis-nori --batch;
+        fi &&
+        /usr/local/bin/docker-entrypoint.sh
+      "
+    volumes:
+      - es02_data:/usr/share/elasticsearch/data
     networks:
       - app-net
 
@@ -168,6 +189,33 @@ services:
       - cluster.initial_master_nodes=es01,es02,es03
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    command: >
+      bash -c "
+        if [ ! -d /usr/share/elasticsearch/plugins/analysis-nori ]; then
+          bin/elasticsearch-plugin install analysis-nori --batch;
+        fi &&
+        /usr/local/bin/docker-entrypoint.sh
+      "
+    volumes:
+      - es03_data:/usr/share/elasticsearch/data
+    networks:
+      - app-net
+
+  # --------------------------
+  # Kibana
+  # ES 데이터를 브라우저에서 시각화
+  # http://localhost:5601 접속
+  # --------------------------
+  kibana:
+    image: kibana:8.17.4
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      # 연결할 ES 주소
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+    depends_on:
+      - es01
     networks:
       - app-net
 
@@ -176,6 +224,9 @@ volumes:
   kafka2_data:
   kafka3_data:
   redis_data:
+  es01_data:
+  es02_data:
+  es03_data:
 
 networks:
   app-net:

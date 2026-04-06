@@ -23,7 +23,7 @@ public class Menu extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 8, nullable = false)
+    @Column(length = 30, nullable = false)
     private String name;
 
     @Column(nullable = false)

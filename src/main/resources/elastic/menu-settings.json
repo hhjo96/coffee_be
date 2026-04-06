@@ -1,0 +1,22 @@
+{
+  "analysis": {
+    "filter": {
+      "synonym_filter": {
+        "type": "synonym",
+        "synonyms": [
+          "아아 => 아이스아메리카노",
+          "뜨아 => 아메리카노",
+          "아라 => 아이스라떼",
+          "아바라 => 아이스바닐라라떼"
+        ]
+      }
+    },
+    "analyzer": {
+      "nori_analyzer": {
+        "type": "custom",
+        "tokenizer": "nori_tokenizer",
+        "filter": ["lowercase", "synonym_filter"]
+      }
+    }
+  }
+}

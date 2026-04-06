@@ -2,20 +2,20 @@ spring:
   application:
     name: coffee_be
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: jdbc:mysql://localhost:3306/coffee_be
+    username: root
+    password: 1234
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
       minimum-idle: 20
   jpa:
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: create-drop
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         default_batch_fetch_size: 100
     defer-datasource-initialization: true
   data:
@@ -32,7 +32,7 @@ spring:
 
     # OpenAI (기본)
     openai:
-      api-key: ${OPENAI_API_KEY:sk-proj-XXXXXXXXXXXXXX}
+      api-key: test
       chat:
         options:
           model: gpt-4o-mini
@@ -58,13 +58,13 @@ server:
 portone:
   api:
     base-url: https://api.portone.io
-    secret: ${PORTONE_API_SECRET}
+    secret: test
   webhook:
-    secret: ${WEBHOOK_SECRET}
+    secret: test
   store:
-    id: ${PORTONE_STORE_ID}
+    id: test
   channel:
-    kg-inicis: ${INICIS_KEY}
+    kg-inicis: test
 
 app:
-  init-data: true
+  init-data: false
