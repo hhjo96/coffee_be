@@ -72,10 +72,6 @@ public class initData {
                 Menu.createMenu("딸기레모네이드",       5500, "딸기와 레몬의 상큼한 조화")
         ));
 
-        menuSearchService.saveAll(
-                menus.stream().map(MenuDocument::from).toList()
-        );
-
         // menu.getName 만 넣을경우 메뉴 이름만 가지고 임베딩함
         // 가격까지 넣더라도 "저렴한거" 를 찾지는 못했음
         // 숫자 계산이 아니라 의미 유사도 기반이라서

@@ -56,6 +56,8 @@ public class MenuDocument {
         return MenuDocument.builder()
                 .id(menu.getId())
                 .name(menu.getName())
+                .price(menu.getPrice())
+                .description(menu.getDescription())
                 .embedding(embedding)  // 벡터 포함
                 .build();
     }
