@@ -3,6 +3,7 @@ package com.example.coffee_be.domain.order.repository;
 import com.example.coffee_be.common.entity.Order;
 import com.example.coffee_be.domain.order.enums.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -27,6 +28,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("since") LocalDateTime since,
             @Param("limit") int limit);
 
+    @Modifying
+    @Query("UPDATE Order o SET o.orderStatus = 'READY' " +
+            "WHERE o.orderStatus = 'PREPARING' " +
+            "AND o.createdAt < :before")
+    int bulkUpdateStatusToReady(@Param("before") LocalDateTime before);
 
 
     List<Order> findAllByOrderStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime dateTime);
