@@ -32,8 +32,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -182,20 +184,32 @@ public class OrderService {
     private List<PopularMenuDto> refreshPopularMenuCache() {
         LocalDateTime since = LocalDateTime.now().minusDays(7);
         List<Object[]> rows = orderRepository.findPopularMenuIdsSince(since, POPULAR_MENU_LIMIT);
+
+        // 1. menuId 목록 추출
+        List<Long> menuIds = rows.stream()
+                .map(row -> ((Number) row[0]).longValue())
+                .toList();
+
+        // 2. 전체 조회
+        Map<Long, Menu> menuMap = menuRepository.findAllById(menuIds).stream()
+                .filter(m -> m.getDeletedAt() == null)
+                .collect(Collectors.toMap(Menu::getId, m -> m));
+
+        // 3. 랭킹 ZSet 갱신
+        redisTemplate.delete(RANKING_KEY);
         List<PopularMenuDto> result = new ArrayList<>();
 
-        redisTemplate.delete(RANKING_KEY);
         for (Object[] row : rows) {
             Long menuId = ((Number) row[0]).longValue();
-            Long count = ((Number) row[1]).longValue();
-            menuRepository.findById(menuId)
-                    .filter(m -> m.getDeletedAt() == null)
-                    .ifPresent(menu -> {
-                        redisTemplate.opsForZSet().add(RANKING_KEY, menuId.toString(), count);
-                        result.add(new PopularMenuDto(
-                                menu.getId(), menu.getName(), menu.getPrice(), count));
-                    });
+            Long count  = ((Number) row[1]).longValue();
+            Menu menu   = menuMap.get(menuId);
+
+            if (menu != null) {
+                redisTemplate.opsForZSet().add(RANKING_KEY, menuId.toString(), count);
+                result.add(new PopularMenuDto(menu.getId(), menu.getName(), menu.getPrice(), count));
+            }
         }
+
         redisTemplate.expire(RANKING_KEY, 60, TimeUnit.SECONDS);
         log.info("[인기메뉴] ZSet 갱신 완료, {}개", result.size());
         return result;
