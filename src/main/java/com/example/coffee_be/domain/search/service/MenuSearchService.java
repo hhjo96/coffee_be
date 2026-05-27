@@ -40,9 +40,7 @@ public class MenuSearchService {
     // fuzzy : 오타 허용 — "아메리가노" → "아메리카노" 매칭
     public List<MenuDto> searchByES(String keyword) {
         log.info("[ES] 메뉴 검색 - keyword={}", keyword);
-
-//        // 기본값 0~2글자는 일치, 3~5글자 짧은 단어는 편집거리 1, 6글자 이상 긴 단어는 2까지 허용한다고 함(현재 세팅한게 없으므로 기본값 유지)
-//        // "name" 필드에서 keyword 에 있는 걸로 검색하는 것
+        // "name" 필드에서 keyword 에 있는 걸로 검색하는 것
 
 /*  이렇게 치면 json 축약어를 안 탄다!! 참고용으로 남겨둠
         Criteria criteria = new Criteria("name").fuzzy(keyword);
@@ -92,6 +90,7 @@ public class MenuSearchService {
                                 )
                         )
                 ) // or 검색
+                .withMinScore(1.0f)
                 .withPageable(PageRequest.of(0, 5))
                 .build();
 
