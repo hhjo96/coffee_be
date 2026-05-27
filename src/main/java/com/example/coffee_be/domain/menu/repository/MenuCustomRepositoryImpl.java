@@ -30,6 +30,8 @@ public class MenuCustomRepositoryImpl implements MenuCustomRepository {
                 ))
                 .from(menu)
                 .where(menu.deletedAt.isNull())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
                 .fetch();
 
         Long total = queryFactory

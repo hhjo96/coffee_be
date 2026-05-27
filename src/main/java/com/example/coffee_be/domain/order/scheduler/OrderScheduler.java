@@ -25,13 +25,10 @@ public class OrderScheduler {
     public void updateOrderStatusToReady() {
         LocalDateTime oneMinuteAgo = LocalDateTime.now().minusMinutes(1);
 
-        List<Order> orders = orderRepository
-                .findAllByOrderStatusAndCreatedAtBefore(OrderStatus.PREPARING, oneMinuteAgo);
+        int updated = orderRepository.bulkUpdateStatusToReady(oneMinuteAgo);
+        if (updated > 0) {
+            log.info("[스케줄러] PREPARING → READY 변경 완료, {}건", updated);
+        }
 
-        if (orders.isEmpty()) return;
-
-        orders.forEach(Order::prepareToReady);
-
-        log.info("[스케줄러] PREPARING → READY 변경 완료, {}건", orders.size());
     }
 }

@@ -11,8 +11,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.query.Criteria;
-import org.springframework.data.elasticsearch.core.query.CriteriaQuery;
 import org.springframework.data.elasticsearch.core.query.Query;
 
 import org.springframework.stereotype.Service;
@@ -37,44 +35,62 @@ public class MenuSearchService {
         log.info("[ES] 메뉴 인덱싱 완료 - {}개", documents.size());
     }
 
-    // nori + fuzzy 검색
+    // nori + fuzzy 검색 + boost 3단계 스코어링
     // nori  : 한국어 형태소 분석 — "아메리카노를" → "아메리카노" 매칭
     // fuzzy : 오타 허용 — "아메리가노" → "아메리카노" 매칭
     public List<MenuDto> searchByES(String keyword) {
         log.info("[ES] 메뉴 검색 - keyword={}", keyword);
-
-//        // 기본값 0~2글자는 일치, 3~5글자 짧은 단어는 편집거리 1, 6글자 이상 긴 단어는 2까지 허용한다고 함(현재 세팅한게 없으므로 기본값 유지)
-//        // "name" 필드에서 keyword 에 있는 걸로 검색하는 것
+        // "name" 필드에서 keyword 에 있는 걸로 검색하는 것
 
 /*  이렇게 치면 json 축약어를 안 탄다!! 참고용으로 남겨둠
-//        Criteria criteria = new Criteria("name").fuzzy(keyword);
+        Criteria criteria = new Criteria("name").fuzzy(keyword);
 
         // ES에 날릴 쿼리 만들기(점수 높은순 5개 자동정렬)
         Query query = new CriteriaQuery(criteria).setPageable(PageRequest.of(0, 5));
 
  */
 
+        /*
+         *     1 match_phrase  boost=3.0 : 구문 완전 일치       최우선 — "아이스 아메리카노" 그대로 입력한 경우
+               2 match(nori)   boost=2.0 : 형태소/동의어 분석   차우선 — "아아" → "아이스아메리카노" 매칭
+               3 fuzzy         boost=0.5 : 오타 허용 편집거리   최하위 — "아메리가노" → "아메리카노" 매칭
+         *
+         * 1, 2, 3을 합산
+         */
+
         Query query = NativeQuery.builder()
                 .withQuery(q -> q
                         .bool(b -> b
                                 .should(s -> s
-                                        // 동의어 검색용 (아아 → 아이스아메리카노)
+                                        // 1 구문 완전 일치 — 가장 정확한 검색. boost 최고
+                                        .matchPhrase(mp -> mp
+                                                .field("name")
+                                                .query(keyword)
+                                                .boost(3.0f)
+                                        )
+                                )
+                                .should(s -> s
+                                        // 2 동의어 검색용 (아아 → 아이스아메리카노)
                                         .match(m -> m
                                                 .field("name")
                                                 .query(keyword)
                                                 .analyzer("nori_analyzer")
+                                                .boost(2.0f)
                                         )
                                 )
                                 .should(s -> s
                                         // fuzzy 검색용 (아메리가노 → 아메리카노)
+                                        // AUTO: 0~2글자 완전일치, 3~5글자 편집거리 1, 6글자이상 편집거리 2
                                         .fuzzy(f -> f
                                                 .field("name")
                                                 .value(keyword)
-                                                .fuzziness("AUTO") // auto 라고 쓸 경우 단어길이에 따라 자동으로 바뀌고, 1이라고 쓰면 편집거리 1만 허용
+                                                .fuzziness("AUTO")
+                                                .boost(0.5f)
                                         )
                                 )
                         )
-                ) // 두개를 or 검색한다고 함
+                ) // or 검색
+                .withMinScore(1.0f)
                 .withPageable(PageRequest.of(0, 5))
                 .build();
 
@@ -105,15 +121,17 @@ public class MenuSearchService {
 
         // float[] → List<Float> 변환
         List<Float> vectorList = new ArrayList<>();
-        for (float v : queryVector) vectorList.add(v);
+        for (float v : queryVector) {
+            vectorList.add(v);
+        }
 
         Query knnQuery = NativeQuery.builder()
                 .withKnnSearches(
                         KnnSearch.of(k -> k
                                 .field("embedding")
                                 .queryVector(vectorList)
-                                .numCandidates(50)
-                                .k(5)
+                                .numCandidates(30) // 후보 30개
+                                .k(5) //진짜 가까운 5개
                         )
                 )
                 .build();
